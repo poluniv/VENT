@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" id="vp" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b6e8f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Vent">
+<meta name="format-detection" content="telephone=no">
+<title>Vent a la ruta · ciclisme a Espanya i Catalunya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#eaf0f2; --panel:#fbfcfc; --ink:#10242d; --muted:#566b75; --line:#cfdadf;
+  --accent:#0b6e8f; --accent-ink:#ffffff; --head:#c4402a; --tail:#13946b; --rain:#3b7fd1;
+  --night:rgba(16,36,45,.08); --chip:rgba(255,255,255,.92); --ele:rgba(86,107,117,.20); --sel:rgba(11,110,143,.13);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0a171d; --panel:#112028; --ink:#e5edf0; --muted:#92a8b1; --line:#27424d;
+    --accent:#55c4e8; --accent-ink:#06222c; --head:#ff7b5c; --tail:#38c99c; --rain:#6aa8f0;
+    --night:rgba(0,0,0,.30); --chip:rgba(17,32,40,.92); --ele:rgba(146,168,177,.22); --sel:rgba(85,196,232,.16);
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+h1,h2,h3{font-family:'Bricolage Grotesque','Public Sans',system-ui,sans-serif;margin:0;letter-spacing:-.01em;font-weight:700}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.05}
+h2{font-size:20px;margin-bottom:10px}
+p{margin:0 0 8px}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1500px;margin:0 auto;padding:18px 16px 40px}
+.top{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+.top p{color:var(--muted);margin:6px 0 0;max-width:62ch}
+.status{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 12px;font-size:13px}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block;flex:none}
+.chip.ok i{background:var(--tail)}
+.chip.err i{background:var(--head)}
+.chip.load i{background:#e0b020;animation:pulse 1s infinite alternate}
+@keyframes pulse{to{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.chip.load i{animation:none}}
+.banner{border:1px solid var(--head);background:var(--panel);border-left-width:6px;border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+.mapcard{padding:0;overflow:hidden;position:relative;margin-bottom:14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+.regions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 11px;cursor:pointer;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:3px 9px;font-size:13px}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
+.mapwrap{position:relative}
+#map{height:max(440px,62vh);width:100%;background:var(--bg)}
+.drop{position:absolute;inset:0;z-index:900;display:none;place-items:center;background:rgba(11,110,143,.22);border:3px dashed var(--accent);font:700 22px 'Bricolage Grotesque',sans-serif;color:var(--ink);pointer-events:none}
+.drop.on{display:grid}
+.timebar{padding:12px 14px 10px;border-top:1px solid var(--line)}
+.trow{display:grid;grid-template-columns:auto 190px minmax(0,1fr);gap:12px;align-items:center}
+.tlabel{font:700 18px 'Bricolage Grotesque',sans-serif;white-space:nowrap}
+.sliderbox{min-width:0}
+input[type=range]{width:100%;accent-color:var(--accent);height:26px;margin:0;display:block}
+.axis{position:relative;height:18px;margin:0 8px;font-size:11px;color:var(--muted)}
+.axis span{position:absolute;top:2px;transform:translateX(-50%);white-space:nowrap}
+.axis span.first{transform:none}
+.axis i{position:absolute;top:0;width:2px;height:8px;background:#e5702b;border-radius:1px}
+.pinfo{font-size:14px;color:var(--muted);margin:8px 0}
+.pinfo b{color:var(--ink)}
+.tlscroll,.chartscroll,.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.tlscroll svg,.chartscroll svg{display:block}
+.legendline{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--muted);margin:2px 0 6px}
+.legendline span::before{content:'';display:inline-block;width:14px;height:8px;margin-right:6px;vertical-align:middle;border-radius:2px}
+.legendline .l1::before{background:#4aa3c7}
+.legendline .l2::before{height:0;border-top:2px dashed var(--muted);border-radius:0}
+.legendline .l3::before{background:var(--rain)}
+.legendline .lh::before{background:var(--head)}
+.legendline .lt::before{background:var(--tail)}
+.legendline .l4::before{background:var(--night);border:1px solid var(--line)}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:9px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.legend .grad{width:200px;height:10px;border-radius:5px;border:1px solid var(--line)}
+.legend .scale{display:flex;justify-content:space-between;width:200px;font-size:11px;margin-top:2px}
+.wxm{width:44px;height:44px;display:grid;place-items:center;position:relative}
+.wxm svg{position:relative}
+.wxm b{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font:700 10px/1 'Public Sans',sans-serif;padding:2px 4px;border-radius:7px;background:var(--chip);color:var(--ink);border:1px solid var(--line);white-space:nowrap}
+.wxm.obs::before{content:'';position:absolute;width:32px;height:32px;border-radius:50%;border:2px solid var(--ink);background:var(--chip)}
+.wxm.obs.metar::before{border-style:dashed}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--ink)}
+.leaflet-popup-content{font:14px/1.45 'Public Sans',sans-serif;margin:12px 14px}
+.leaflet-container a{color:var(--accent)}
+.leaflet-tooltip{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.leaflet-control-layers{background:var(--panel);color:var(--ink)}
+.field{display:grid;gap:4px;margin-bottom:10px}
+.field label{font-size:13px;color:var(--muted)}
+.field input,.field select{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 9px;width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.filebtn{display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--accent);border-radius:8px;padding:16px 10px;cursor:pointer;text-align:center;font-weight:600;margin-bottom:10px;position:relative}
+.filebtn:hover{background:var(--sel)}
+.filebtn input{position:absolute;opacity:0;width:1px;height:1px}
+.filebtn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+.zones{display:grid;gap:2px}
+.zgrp{font:700 13px 'Bricolage Grotesque',sans-serif;color:var(--muted);margin:10px 6px 2px;padding-top:8px;border-top:1px solid var(--line)}
+.zgrp:first-child{margin-top:0;border-top:0;padding-top:0}
+.zone{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;text-align:left;border:0;background:transparent;padding:4px 6px;border-radius:6px;cursor:pointer}
+.zone:hover{background:var(--sel)}
+.zone .nm{display:block;font-weight:600;font-size:14px;line-height:1.25}
+.zone .sub{display:block;font-size:12px;color:var(--muted);line-height:1.3}
+.zone .v{font:700 17px 'Bricolage Grotesque',sans-serif;text-align:right;line-height:1.05}
+.zone .v small{display:block;font:500 11px 'Public Sans',sans-serif;color:var(--muted)}
+svg text{font-family:'Public Sans',system-ui,sans-serif;font-size:11px}
+svg .tx{fill:var(--muted)}
+svg .txi{fill:var(--ink)}
+svg .gl{stroke:var(--line);stroke-width:1}
+svg .gl.d{stroke-dasharray:3 4}
+svg .night{fill:var(--night)}
+svg .rain{fill:var(--rain);opacity:.85}
+svg .ele{fill:var(--ele)}
+svg .sel{fill:var(--sel);stroke:var(--accent);stroke-width:1.5}
+svg .sp{font-weight:700;font-size:11px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{border-left:3px solid var(--line);padding:2px 0 2px 10px}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{font:700 20px 'Bricolage Grotesque',sans-serif}
+.head{color:var(--head)} .tail{color:var(--tail)}
+.big{font:700 22px 'Bricolage Grotesque',sans-serif;margin-bottom:4px}
+.alt{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 12px}
+.narr{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.narr li{display:grid;grid-template-columns:34px 1fr;gap:10px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.narr .when{font-weight:700}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13.5px}
+th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel)}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--sel)}
+td svg{vertical-align:middle}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:10px}
+footer p{max-width:100ch}
+
+.topr{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.layoutsw{display:flex;align-items:center;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;padding:6px 12px;cursor:pointer;font-size:13px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.coll>h2{display:flex;justify-content:space-between;align-items:center}
+body.lock{overflow:hidden}
+.mapcard.full{position:fixed;left:0;right:0;top:0;bottom:0;z-index:3000;margin:0;border-radius:0;border:0;display:flex;flex-direction:column;background:var(--panel)}
+.mapcard.full .mapwrap{flex:1;min-height:0}
+.mapcard.full #map{height:100%!important;min-height:0!important}
+.mapcard.full .tlscroll,.mapcard.full .legend,.mapcard.full .legendline{display:none}
+.mapcard.full .timebar{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+.tlscroll,.chartscroll,.tablewrap{-webkit-overflow-scrolling:touch}
+/* ---- Format mòbil (classe .m a <html>) ---- */
+html.m .hero{grid-template-columns:1fr}
+html.m .trow{grid-template-columns:auto minmax(0,1fr)}
+html.m .trow .sliderbox{grid-column:1/-1}
+html.m .wrap{padding:10px max(10px,env(safe-area-inset-right)) 28px max(10px,env(safe-area-inset-left))}
+html.m h1{font-size:25px}
+html.m h2{font-size:18px}
+html.m .top{margin-bottom:8px;gap:8px}
+html.m .top p{display:none}
+html.m .topr{align-items:flex-start;width:100%}
+html.m .status{gap:6px}
+html.m .chip{font-size:12px;padding:4px 10px}
+html.m .bar{flex-wrap:nowrap;overflow-x:auto;gap:8px;padding:8px 10px;-webkit-overflow-scrolling:touch}
+html.m .bar .regions{flex-wrap:nowrap;flex:none}
+html.m .btn{padding:9px 13px;min-height:40px}
+html.m .btn.sm{padding:8px 12px;font-size:14px;min-height:38px;white-space:nowrap}
+html.m .chk{white-space:nowrap;min-height:34px}
+html.m .seg button{padding:8px 12px;min-height:38px}
+html.m #map{height:54vh;height:54dvh;min-height:340px}
+html.m .timebar{padding:10px 10px 8px}
+html.m .tlabel{font-size:16px;white-space:normal}
+html.m .pinfo{font-size:13px}
+html.m input[type=range]{height:34px}
+html.m .field input,html.m .field select{font-size:16px;padding:10px}
+html.m .card{padding:12px}
+html.m .mapcard{padding:0}
+html.m .chip span{overflow-wrap:anywhere}
+html.m .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+html.m .stat b{font-size:18px}
+html.m .legend{font-size:12px;padding:8px 10px}
+html.m .zone{padding:8px 6px}
+html.m .big{font-size:20px}
+html.m .alt{gap:8px}
+html.m .coll>h2{cursor:pointer;-webkit-tap-highlight-color:transparent}
+html.m .coll>h2::after{content:'';width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-right:4px;flex:none}
+html.m .coll.closed>h2::after{transform:rotate(-45deg)}
+html.m .coll.closed>.cbody{display:none}
+html.m .coll.closed>h2{margin-bottom:0}
+html.m footer{font-size:12px}
+html.d #map{height:640px}
+
+button,select,input,label,summary{touch-action:manipulation}
+.split{margin-top:14px}
+.split .s3{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.split .s3 span{display:block;height:100%}
+.split .lab{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--muted);margin-top:6px}
+.split .lab b{color:var(--ink)}
+#toMap{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:1500;box-shadow:0 2px 10px rgba(0,0,0,.28);border-radius:999px;padding:10px 16px}
+details.help{margin:0 0 10px}
+details.help summary{cursor:pointer;font-weight:600;color:var(--ink)}
+details.help ol,details.help ul{margin:8px 0 0;padding-left:22px}
+details.help li{margin-bottom:6px}
+.banner .btn{margin-left:10px;vertical-align:middle}
+</style>
+<script>
+(function(){
+  function show(msg){
+    var b=document.getElementById('banner');
+    if(!b){ b=document.createElement('div'); b.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99999;background:#fff3f0;color:#7a1d0e;border-bottom:3px solid #c4402a;padding:10px 14px;font:14px system-ui,sans-serif'; (document.body||document.documentElement).appendChild(b); }
+    else { b.hidden=false; }
+    b.textContent=msg;
+  }
+  window.__showErr=show;
+  window.addEventListener('error',function(e){
+    var t=e.target;
+    if(t&&t!==window&&t.tagName){
+      if(t.tagName==='SCRIPT') show('No s’ha pogut carregar una llibreria necessària ('+String(t.src||'').split('/').pop()+'). Comprova la connexió a internet i torna a obrir la pàgina.');
+      return;
+    }
+    show('Error de la pàgina: '+(e.message||'desconegut')+(e.lineno?' (línia '+e.lineno+')':'')+'. Fes-ne una captura i envia-me-la.');
+  },true);
+})();
+</script>
+</head>
+<body>
+<noscript><div style="padding:14px;background:#fff3f0;color:#7a1d0e">Aquesta pàgina necessita JavaScript activat.</div></noscript>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Vent a la ruta</h1>
+      <p>Direcció i força del vent hora a hora a tot Espanya, amb detall de Catalunya. Pronòstic de models meteorològics i mesures reals de sensors. Carrega el teu GPX o fes zoom on vulguis.</p>
+    </div>
+    <div class="topr">
+      <div class="layoutsw"><span class="small muted">Format</span>
+        <div class="seg" id="layoutSeg" role="group" aria-label="Format de la pàgina">
+          <button type="button" data-l="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-l="mobile" aria-pressed="false">Mòbil</button>
+          <button type="button" data-l="desktop" aria-pressed="false">Ordinador</button>
+        </div>
+      </div>
+      <div class="status" id="status" aria-live="polite">
+        <span class="chip load" id="chipFc"><i></i><span>Pronòstic: carregant…</span></span>
+        <span class="chip load" id="chipObs"><i></i><span>Sensors: carregant…</span></span>
+      </div>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden role="alert"></div>
+
+  <section class="hero">
+    <div class="card mapcard" id="mapcard">
+      <div class="bar">
+        <div class="regions"><button class="btn sm" id="locBtn" type="button">La meva ubicació</button><button class="btn sm" id="fullBtn" type="button">Pantalla completa</button><span id="regions" class="regions" role="group" aria-label="Zones del mapa"></span></div>
+        <div class="regions">
+          <label class="chk"><input type="checkbox" id="optColor" checked> Color</label>
+          <label class="chk"><input type="checkbox" id="optAnim" checked> Animació</label>
+          <label class="chk"><input type="checkbox" id="optArrows" checked> Fletxes</label>
+          <label class="chk"><input type="checkbox" id="optObs" checked> Sensors</label>
+        </div>
+      </div>
+      <div class="mapwrap">
+        <div id="map" role="application" aria-label="Mapa del vent"></div>
+        <div class="drop" id="drop">Deixa aquí el fitxer GPX</div>
+      </div>
+      <div class="timebar" id="timebar">
+        <div class="trow">
+          <button class="btn primary" id="play" type="button">Reprodueix</button>
+          <div class="tlabel" id="tLabel">—</div>
+          <div class="sliderbox">
+            <input type="range" id="slider" min="0" max="0" value="0" step="1" aria-label="Hora del pronòstic">
+            <div class="axis" id="axis"></div>
+          </div>
+        </div>
+        <div class="pinfo" id="pInfo"></div>
+        <div class="legendline"><span class="l1">vent mitjà (km/h)</span><span class="l2">ratxes</span><span class="l3">pluja</span><span class="l4">nit</span></div>
+        <div class="tlscroll" id="tl"></div>
+      </div>
+      <div class="legend">
+        <div><div class="grad" id="grad"></div><div class="scale"><span>0</span><span>15</span><span>30</span><span>45</span><span>60+ km/h</span></div></div>
+        <span>Les línies i les fletxes van cap on <b>va</b> el vent. Cercle amb vora: mesura real d’un sensor. Clica el mapa per veure el vent d’un punt a la barra del temps.</span>
+      </div>
+    </div>
+
+    <aside>
+      <div class="card" id="routeCard">
+        <h2>La teva ruta</h2>
+        <label class="filebtn" id="fileLbl">
+          <input type="file" id="file">
+          <span id="fileTxt">Carrega un fitxer GPX</span>
+        </label>
+        <p class="small muted" id="fileHint">Al mòbil, tria’l de “Fitxers”. A l’ordinador també pots arrossegar-lo al mapa. Sense GPX, l’eina mostra el vent d’Espanya sencera.</p>
+        <div class="field">
+          <label for="speed">Velocitat mitjana prevista (km/h)</label>
+          <input type="number" id="speed" min="8" max="60" step="1" value="25">
+        </div>
+        <div id="startFields" hidden>
+          <div class="row2">
+            <div class="field"><label for="startDay">Dia de sortida</label><select id="startDay"></select></div>
+            <div class="field"><label for="startTime">Hora de sortida</label><input type="time" id="startTime" step="900"></div>
+          </div>
+          <div class="alt">
+            <button class="btn primary sm" id="bestBtn" type="button">Posa la millor hora</button>
+            <button class="btn sm" id="clearBtn" type="button">Treu la ruta</button>
+          </div>
+          <label class="chk small"><input type="checkbox" id="optNight"> Permet sortir de nit</label>
+        </div>
+      </div>
+
+      <div class="card coll" data-closed="1">
+        <h2>Dades</h2><div class="cbody">
+        <div class="field">
+          <label for="model">Model de pronòstic</label>
+          <select id="model"></select>
+        </div>
+        <button class="btn" id="refresh" type="button">Actualitza les dades</button>
+        <p class="note">Vent a 10 m d’alçada; a nivell de bicicleta serà una mica més fluix, sobretot entre arbres i edificis.</p>
+      </div></div>
+
+      <div class="card coll">
+        <h2>Vent per zones</h2><div class="cbody">
+        <p class="small muted" id="zonesTime"></p>
+        <div class="zones" id="zones"></div>
+      </div></div>
+    </aside>
+  </section>
+
+  <section id="routeOut" hidden>
+    <div class="card"><h2 id="rTitle">Ruta</h2><div class="stats" id="rSummary"></div><div class="split" id="rSplit"></div></div>
+    <div class="card">
+      <h2>Millor hora per sortir</h2>
+      <div id="rBest"></div>
+      <div class="chartscroll"><div id="cStart"></div></div>
+      <p class="note">Les barres verdes indiquen quant menys esforç contra l’aire faries respecte a un dia sense vent (i les vermelles, quant més). És una aproximació: la resistència de l’aire va amb el quadrat de la velocitat respecte a l’aire. No inclou desnivell, fregament ni parades; la velocitat es considera constant.</p>
+    </div>
+    <div class="card">
+      <h2>El vent al llarg de la ruta</h2>
+      <div class="legendline"><span class="lh">per sobre de zero: vent de cara</span><span class="lt">per sota de zero: vent de cua</span></div>
+      <div class="chartscroll"><div id="cProfile"></div></div>
+      <div class="pinfo" id="profInfo">Passa el cursor per sobre el gràfic per veure el vent punt a punt.</div>
+    </div>
+    <div class="card"><h2>Què et trobaràs, hora per hora</h2><ol class="narr" id="rNarr"></ol></div>
+    <div class="card coll">
+      <h2>Punt a punt</h2><div class="cbody">
+      <div class="alt"><button class="btn sm" id="namesBtn" type="button">Posa noms de llocs (OpenStreetMap)</button><span class="small muted" id="namesStatus"></span></div>
+      <div class="tablewrap"><table id="rTable"></table></div>
+    </div></div>
+    <div class="card coll"><h2>Pronòstic contra sensors</h2><div class="cbody"><div id="rSensors"></div></div></div>
+  </section>
+
+  <details class="help" id="help">
+    <summary>Com obrir-ho al mòbil</summary>
+    <p class="small">Un mòbil, i sobretot l’iPhone, no executa bé un fitxer HTML local (obert des de Fitxers, d’un missatge o d’una app de xat): la pàgina no pot descarregar el vent. Cal servir-la des d’una adreça web (https). Les opcions més fàcils:</p>
+    <ol class="small">
+      <li><b>Netlify Drop</b> (gratuït): des de l’ordinador, crea una carpeta amb el fitxer dins, canvia-li el nom a <code>index.html</code> i arrossega la carpeta a <code>app.netlify.com/drop</code>. Et dona un enllaç que ja pots obrir a Safari o Chrome. Per conservar-lo, crea un compte gratuït.</li>
+      <li><b>GitHub Pages</b> (gratuït i permanent): crea un repositori, puja el fitxer com a <code>index.html</code> i activa Pages a Settings.</li>
+      <li><b>Sense web, només iPhone:</b> l’app gratuïta <i>Documents</i> (Readdle) obre fitxers HTML locals amb el seu navegador intern.</li>
+    </ol>
+    <p class="small">Un cop obert a Safari: Compartir → “Afegeix a la pantalla d’inici” i et queda com una app. Perquè “La meva ubicació” funcioni cal https i donar el permís.</p>
+  </details>
+  <footer>
+    <p><b>Fonts de dades.</b> Pronòstic: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (models numèrics de Météo-France, DWD, ECMWF i NOAA). Mesures reals: estacions automàtiques (XEMA) del Servei Meteorològic de Catalunya (dades obertes de la Generalitat) i observacions METAR d’aeroports (NOAA Aviation Weather). Noms de llocs: OpenStreetMap/Nominatim. Mapes base: Esri i OpenStreetMap.</p>
+    <p>Tot el que es mostra ve d’aquestes fonts; si una no respon, l’eina ho avisa i no n’inventa cap valor. Les mesures de sensors només cobreixen Catalunya i els aeroports. Els pronòstics són sortides de models i poden fallar, sobretot a les valls del Pirineu i amb vent de tramuntana. Per a decisions de seguretat consulta també els avisos del Meteocat i d’AEMET.</p>
+  </footer>
+</div>
+
+<button class="btn primary" id="toMap" type="button" hidden>↑ Mapa</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+'use strict';
+if(typeof L==='undefined'){ window.__showErr('No s’ha pogut carregar el mapa (Leaflet). Comprova la connexió a internet i torna a obrir la pàgina.'); return; }
+
+/* ======================= PURE-START ======================= */
+const TZ='Europe/Madrid';
+const isNum=x=>typeof x==='number'&&isFinite(x);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI;
+const norm360=a=>((a%360)+360)%360;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad2=n=>String(n).padStart(2,'0');
+
+function hav(a,b){
+  const R=6371.0088, dLat=rad(b.lat-a.lat), dLon=rad(b.lon-a.lon);
+  const x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(x)));
+}
+function brg(a,b){
+  const y=Math.sin(rad(b.lon-a.lon))*Math.cos(rad(b.lat));
+  const x=Math.cos(rad(a.lat))*Math.sin(rad(b.lat))-Math.sin(rad(a.lat))*Math.cos(rad(b.lat))*Math.cos(rad(b.lon-a.lon));
+  return norm360(deg(Math.atan2(y,x)));
+}
+/* Direcció meteorològica: des d'on bufa el vent. Vector: cap on va (e = est, n = nord). */
+const toVec=(s,d)=>({e:-s*Math.sin(rad(d)),n:-s*Math.cos(rad(d))});
+const fromDir=(e,n)=>norm360(deg(Math.atan2(-e,-n)));
+
+const C16=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+const LOCAL8=['tramuntana','gregal','llevant','xaloc','migjorn','garbí','ponent','mestral'];
+const c16=d=>C16[Math.round(norm360(d)/22.5)%16];
+const local8=d=>LOCAL8[Math.round(norm360(d)/45)%8];
+const windWord=s=>s<5?'quasi en calma':s<12?'fluix':s<20?'moderat':s<30?'fort':s<40?'molt fort':'temporal';
+
+const FMT_HM=new Intl.DateTimeFormat('ca-ES',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+const FMT_DAY=new Intl.DateTimeFormat('ca-ES',{timeZone:TZ,weekday:'short',day:'numeric',month:'numeric'});
+const FMT_PARTS=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+const fmtHM=ms=>FMT_HM.format(ms);
+const fmtDay=ms=>FMT_DAY.format(ms);
+const fmtFull=ms=>fmtDay(ms)+' · '+fmtHM(ms);
+function mp(ms){
+  const o={}; FMT_PARTS.formatToParts(ms).forEach(p=>{o[p.type]=p.value;});
+  return {y:+o.year,m:+o.month,d:+o.day,h:+o.hour%24,mi:+o.minute};
+}
+function fmtDur(h){ const m=Math.round(h*60); return Math.floor(m/60)+' h '+pad2(m%60)+' min'; }
+
+/* Colors */
+const rgb=c=>'rgb('+c.map(Math.round).join(',')+')';
+function stopsColor(stops,v){
+  if(v<=stops[0][0]) return rgb(stops[0][1]);
+  for(let i=1;i<stops.length;i++){
+    if(v<=stops[i][0]){
+      const a=stops[i-1],b=stops[i],f=(v-a[0])/(b[0]-a[0]);
+      return rgb(a[1].map((x,k)=>x+(b[1][k]-x)*f));
+    }
+  }
+  return rgb(stops[stops.length-1][1]);
+}
+const SPEED_STOPS=[[0,[157,183,194]],[8,[74,163,199]],[18,[47,174,123]],[28,[224,176,32]],[38,[229,112,43]],[50,[196,48,43]],[65,[123,45,142]]];
+const HEAD_STOPS=[[-25,[26,163,122]],[0,[227,185,60]],[25,[196,64,42]]];
+const windColor=v=>stopsColor(SPEED_STOPS,v);
+const headColor=v=>stopsColor(HEAD_STOPS,clamp(v,-25,25));
+
+/* ---- Sèries de pronòstic ---- */
+function parseSeries(j,p){
+  const h=j.hourly||{};
+  const pick=name=>{ if(h[name]) return h[name]; const k=Object.keys(h).find(k=>k.indexOf(name)===0); return k?h[k]:null; };
+  const num=a=>(a||[]).map(v=>isNum(v)?v:null);
+  const s={lat:p.lat,lon:p.lon,t:(h.time||[]).map(x=>x*1000),
+    spd:num(pick('wind_speed_10m')),dir:num(pick('wind_direction_10m')),gst:num(pick('wind_gusts_10m')),
+    tmp:num(pick('temperature_2m')),pr:num(pick('precipitation')),day:num(pick('is_day'))};
+  s.empty=!s.t.length||s.spd.every(v=>v===null)||s.dir.every(v=>v===null);
+  return s;
+}
+const lerpN=(a,b,q)=>isNum(a)&&isNum(b)?a+(b-a)*q:(isNum(a)?a:(isNum(b)?b:null));
+
+/* Vent interpolat (components vectorials) en un instant */
+function windAt(s,tMs){
+  if(!s||!s.t.length) return null;
+  const x=(tMs-s.t[0])/3600000;
+  if(x<-1e-9||x>s.t.length-1+1e-9) return null;
+  const i=Math.min(Math.floor(Math.max(0,x)),s.t.length-2), f=clamp(x-i,0,1);
+  const vs=[i,i+1].map(k=>(isNum(s.spd[k])&&isNum(s.dir[k]))?toVec(s.spd[k],s.dir[k]):null);
+  let e,n;
+  if(vs[0]&&vs[1]){e=vs[0].e+(vs[1].e-vs[0].e)*f;n=vs[0].n+(vs[1].n-vs[0].n)*f;}
+  else if(vs[0]){e=vs[0].e;n=vs[0].n;} else if(vs[1]){e=vs[1].e;n=vs[1].n;} else return null;
+  const spd=Math.hypot(e,n);
+  const g=lerpN(s.gst[i],s.gst[i+1],f);
+  const pr=isNum(s.pr[i+1])?s.pr[i+1]:(isNum(s.pr[i])?s.pr[i]:null);
+  return {e,n,spd,dir:fromDir(e,n),gst:Math.max(spd,isNum(g)?g:spd),tmp:lerpN(s.tmp[i],s.tmp[i+1],f),pr:pr,day:s.day[f<.5?i:i+1]};
+}
+
+/* ---- Ruta ---- */
+function buildRoute(pts){
+  const cum=[0];
+  for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+hav(pts[i-1],pts[i]));
+  const total=cum[cum.length-1];
+  if(!(total>=0.5)) throw new Error('La ruta és massa curta (menys de 0,5 km).');
+  const R={pts,cum,total,coarse:[],fine:[],hasEle:false};
+  const posAt=d=>posOn(R,d);
+  R.posAt=posAt;
+  const nC=Math.max(1,Math.ceil(total/Math.max(3,total/45)));
+  for(let k=0;k<=nC;k++){ const d=k*total/nC, p=posAt(d); R.coarse.push({d,lat:p.lat,lon:p.lon,series:null,name:null}); }
+  const nF=Math.max(2,Math.ceil(total/Math.max(0.4,total/700)));
+  const dl=Math.min(0.3,total/nF/2);
+  let withEle=0;
+  for(let k=0;k<=nF;k++){
+    const d=k*total/nF, p=posAt(d);
+    const a=posAt(Math.max(0,d-dl)), b=posAt(Math.min(total,d+dl));
+    if(isNum(p.ele)) withEle++;
+    R.fine.push({d,lat:p.lat,lon:p.lon,ele:p.ele,brg:brg(a,b)});
+  }
+  R.hasEle=withEle>R.fine.length*0.8;
+  R.gain=R.hasEle?elevGain(pts.map(p=>p.ele)):null;
+  return R;
+}
+function posOn(R,d){
+  const c=R.cum,pts=R.pts; let lo=0,hi=c.length-1;
+  if(d<=0) return pts[0]; if(d>=c[hi]) return pts[hi];
+  while(hi-lo>1){const m=(lo+hi)>>1; if(c[m]<=d) lo=m; else hi=m;}
+  const f=(d-c[lo])/((c[hi]-c[lo])||1), a=pts[lo], b=pts[hi];
+  return {lat:a.lat+(b.lat-a.lat)*f,lon:a.lon+(b.lon-a.lon)*f,ele:(isNum(a.ele)&&isNum(b.ele))?a.ele+(b.ele-a.ele)*f:null};
+}
+
+/* Avalua una sortida: vent que es trobarà a cada punt a l'hora de pas.
+   index aerodinàmic: 100 = aire en calma; menys de 100 = el vent t'ajuda. */
+function evalRide(R,startMs,v,keepFine){
+  const cw=[];
+  for(const c of R.coarse){
+    const t=startMs+c.d/v*3600000, w=windAt(c.series,t);
+    if(!w) return null;
+    cw.push({t,w});
+  }
+  const nF=R.fine.length, fine=keepFine?[]:null;
+  let j=0,sumHead=0,sumCost=0,maxG=0,maxPr=0,rainN=0,night=false,sumCross=0;
+  for(let k=0;k<nF;k++){
+    const f=R.fine[k];
+    while(j<R.coarse.length-2&&R.coarse[j+1].d<f.d) j++;
+    const c0=R.coarse[j],c1=R.coarse[j+1];
+    const q=clamp((f.d-c0.d)/((c1.d-c0.d)||1),0,1), a=cw[j].w, b=cw[j+1].w;
+    const e=a.e+(b.e-a.e)*q, n=a.n+(b.n-a.n)*q, spd=Math.hypot(e,n);
+    const gst=Math.max(spd,a.gst+(b.gst-a.gst)*q);
+    const sb=Math.sin(rad(f.brg)), cb=Math.cos(rad(f.brg));
+    const head=-(e*sb+n*cb), cross=-(e*cb-n*sb);
+    const pr=Math.max(a.pr||0,b.pr||0);
+    const air=Math.max(0,v+head);
+    sumHead+=head; sumCross+=cross; sumCost+=air*air;
+    if(gst>maxG) maxG=gst; if(pr>maxPr) maxPr=pr; if(pr>=0.2) rainN++;
+    if(fine) fine.push({d:f.d,lat:f.lat,lon:f.lon,ele:f.ele,brg:f.brg,head,cross,spd,dir:fromDir(e,n),gst,e,n,pr,tmp:lerpN(a.tmp,b.tmp,q),t:startMs+f.d/v*3600000});
+  }
+  for(const x of cw) if(x.w.day===0) night=true;
+  return {startMs,v,cw,fine,idx:100*(sumCost/nF)/(v*v),meanHead:sumHead/nF,meanCross:sumCross/nF,maxGust:maxG,maxPr,rainShare:rainN/nF,night,endMs:startMs+R.total/v*3600000};
+}
+function candidates(R,v,times,nowMs){
+  const step=30*60000, tN=times[times.length-1];
+  let s=Math.max(times[0],Math.ceil(nowMs/step)*step);
+  const out=[];
+  for(let k=0;k<300&&s<=tN;k++,s+=step){ const r=evalRide(R,s,v,false); if(r) out.push(r); }
+  return out;
+}
+function pickBest(c,allowNight){
+  let pool=allowNight?c:c.filter(x=>!x.night);
+  if(!pool.length) pool=c;
+  let best=null; for(const x of pool) if(!best||x.idx<best.idx) best=x;
+  return best;
+}
+
+/* Frase en català sobre el vent respecte al ciclista */
+function relPhrase(head,cross){
+  const ah=Math.abs(head), ac=Math.abs(cross);
+  const side=cross>0?'la dreta':'l’esquerra';
+  if(ah<4&&ac<6) return 'vent gairebé neutre';
+  if(ah<4) return 'vent lateral des de '+side;
+  const mag=ah>=12?'fort':ah>=7?'moderat':'lleuger';
+  let t=(head>0?'de cara ':'de cua ')+mag+' ('+(head>0?'+':'−')+Math.round(ah)+' km/h)';
+  if(ac>=10) t+=' i lateral des de '+side;
+  return t;
+}
+
+function stopsRGB(stops,v){
+  if(v<=stops[0][0]) return stops[0][1].slice();
+  for(let i=1;i<stops.length;i++){
+    if(v<=stops[i][0]){
+      const a=stops[i-1],b=stops[i],f=(v-a[0])/(b[0]-a[0]);
+      return a[1].map((x,k)=>x+(b[1][k]-x)*f);
+    }
+  }
+  return stops[stops.length-1][1].slice();
+}
+const windRGB=v=>stopsRGB(SPEED_STOPS,v);
+
+/* Graella regular (reticle) per a la vista del mapa: punts alineats a potències de 2 de grau,
+   així es reutilitzen en moure el mapa i no es repeteixen consultes. */
+function latStep(raw){ let s=32; while(s/2>=raw&&s>1/32) s/=2; return s; }
+function makeLattice(b,z,maxPts){
+  const rawLon=90*360/(256*Math.pow(2,z)), cl=Math.cos(rad((b.south+b.north)/2));
+  let sx=latStep(rawLon), sy=latStep(rawLon*Math.max(.2,cl)), pts=[];
+  const padLon=(b.east-b.west)*0.06, padLat=(b.north-b.south)*0.06;
+  for(let it=0;it<8;it++){
+    pts=[];
+    const lat0=Math.max(-85,b.south-padLat), lat1=Math.min(85,b.north+padLat);
+    const lon0=Math.max(-180,b.west-padLon), lon1=Math.min(180,b.east+padLon);
+    for(let la=Math.ceil(lat0/sy)*sy;la<=lat1+1e-9;la+=sy)
+      for(let lo=Math.ceil(lon0/sx)*sx;lo<=lon1+1e-9;lo+=sx) pts.push({lat:+la.toFixed(5),lon:+lo.toFixed(5)});
+    if(pts.length<=maxPts) break;
+    sx*=2; sy*=2;
+  }
+  return {pts,sx,sy};
+}
+/* Interpolació IDW del vector de vent sobre una malla de cel·les (en píxels). */
+function idwField(pts,cols,rows,cell,cutoff){
+  const n=cols*rows, U=new Float32Array(n), V=new Float32Array(n), M=new Uint8Array(n);
+  const eps=Math.pow(cutoff*0.08,2), c2=cutoff*cutoff;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const x=c*cell, y=r*cell; let sw=0,se=0,sn=0,dmin=Infinity;
+    for(let i=0;i<pts.length;i++){
+      const p=pts[i], dx=p.x-x, dy=p.y-y, d2=dx*dx+dy*dy;
+      if(d2<dmin) dmin=d2;
+      if(d2>c2*4) continue;
+      const w=1/(d2+eps); sw+=w; se+=w*p.e; sn+=w*p.n;
+    }
+    if(dmin<=c2&&sw>0){ const i=r*cols+c; U[i]=se/sw; V[i]=sn/sw; M[i]=1; }
+  }
+  return {U,V,M,cols,rows,cell};
+}
+
+/* Desnivell positiu amb histèresi (ignora el soroll del GPS). */
+function elevGain(list){
+  let ref=null,gain=0;
+  for(const e of list){
+    if(!isNum(e)) continue;
+    if(ref===null){ ref=e; continue; }
+    if(e-ref>=3){ gain+=e-ref; ref=e; } else if(ref-e>=3){ ref=e; }
+  }
+  return gain;
+}
+/* ======================= PURE-END ======================= */
+
+const $=s=>document.querySelector(s);
+const MODELS=[
+  ['best_match','Automàtic (el millor model disponible)'],
+  ['meteofrance_seamless','Météo-France (AROME/ARPEGE)'],
+  ['icon_seamless','ICON (DWD)'],
+  ['ecmwf_ifs025','ECMWF IFS'],
+  ['gfs_seamless','GFS (NOAA)']
+];
+const GC='Catalunya', GE='Resta d’Espanya';
+const ZONES=[
+  {g:GC,n:'Barcelona',lat:41.385,lon:2.173},{g:GC,n:'Vallès (Sabadell)',lat:41.546,lon:2.108},
+  {g:GC,n:'Maresme (Mataró)',lat:41.540,lon:2.445},{g:GC,n:'Penedès (Vilafranca)',lat:41.345,lon:1.699},
+  {g:GC,n:'Bages (Manresa)',lat:41.725,lon:1.826},{g:GC,n:'Osona (Vic)',lat:41.930,lon:2.255},
+  {g:GC,n:'Girona',lat:41.979,lon:2.821},{g:GC,n:'Costa Brava (Palamós)',lat:41.847,lon:3.128},
+  {g:GC,n:'Alt Empordà (Figueres)',lat:42.266,lon:2.961},{g:GC,n:'Cerdanya (Puigcerdà)',lat:42.432,lon:1.929},
+  {g:GC,n:'Alt Urgell (la Seu)',lat:42.358,lon:1.460},{g:GC,n:'Val d’Aran (Vielha)',lat:42.703,lon:0.795},
+  {g:GC,n:'Lleida',lat:41.617,lon:0.620},{g:GC,n:'Segarra (Cervera)',lat:41.667,lon:1.272},
+  {g:GC,n:'Camp de Tarragona',lat:41.119,lon:1.245},{g:GC,n:'Terres de l’Ebre (Tortosa)',lat:40.812,lon:0.521},
+  {g:GE,n:'Madrid',lat:40.417,lon:-3.704},{g:GE,n:'València',lat:39.470,lon:-0.376},
+  {g:GE,n:'Saragossa',lat:41.649,lon:-0.889},{g:GE,n:'Palma',lat:39.570,lon:2.650},
+  {g:GE,n:'Múrcia',lat:37.992,lon:-1.130},{g:GE,n:'Sevilla',lat:37.389,lon:-5.984},
+  {g:GE,n:'Màlaga',lat:36.721,lon:-4.421},{g:GE,n:'Bilbao',lat:43.263,lon:-2.935},
+  {g:GE,n:'A Coruña',lat:43.362,lon:-8.411},{g:GE,n:'Las Palmas',lat:28.124,lon:-15.430}
+];
+const SPAIN_BOUNDS=[[35.9,-9.6],[43.9,4.6]];
+const CAT_BOUNDS=[[40.48,0.12],[42.88,3.34]];
+const REGIONS=[
+  ['Espanya',SPAIN_BOUNDS],
+  ['Catalunya',CAT_BOUNDS],
+  ['Barcelona i Vallès',[[41.20,1.80],[41.78,2.60]]],
+  ['Catalunya central',[[41.45,1.35],[42.20,2.55]]],
+  ['Girona i Costa Brava',[[41.65,2.30],[42.50,3.34]]],
+  ['Pirineu',[[42.15,0.50],[42.88,2.70]]],
+  ['Ponent',[[41.25,0.30],[42.15,1.55]]],
+  ['Tarragona i Ebre',[[40.48,0.15],[41.40,1.75]]],
+  ['Balears',[[38.6,1.1],[40.2,4.5]]],
+  ['Canàries',[[27.5,-18.4],[29.5,-13.3]]]
+];
+const HOURLY='wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,precipitation,is_day';
+const REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+const S={model:'best_match',times:[],idx:0,cache:new Map(),zones:[],grid:null,gridStep:null,gridKey:'',gridTok:0,gridBlock:0,gridErr:false,
+  stations:[],stationsX:[],stationsM:[],point:null,route:null,ride:null,cands:[],best:null,speed:25,playing:null,
+  layout:'auto',fx:{color:true,anim:!REDUCED,arrows:true},showObs:true,allowNight:false,dayStarts:[],gridTimer:null,rafPending:false,
+  namesToken:0,routeName:'',baseDark:false};
+let map,L_grid,L_obs,L_route,L_rarrows,L_misc,pinMarker,riderMarker,hoverMarker,refLayer=null,BASEDEFS={};
+
+/* ---------- Xarxa ---------- */
+async function getJSON(url){
+  const r=await fetch(url);
+  if(!r.ok){
+    let reason=''; try{ const j=await r.json(); reason=j.reason||j.message||''; }catch(e){}
+    if(r.status===429) throw new Error('S’ha arribat al límit d’ús de l’API. Torna-ho a provar d’aquí una estona.');
+    throw new Error('Error '+r.status+(reason?': '+reason:''));
+  }
+  return r.json();
+}
+const ckey=p=>S.model+'|'+p.lat.toFixed(3)+','+p.lon.toFixed(3);
+async function fetchForecast(points){
+  const res=new Array(points.length), need=[];
+  points.forEach((p,i)=>{ const c=S.cache.get(ckey(p)); if(c) res[i]=c; else need.push(i); });
+  const CH=50, jobs=[];
+  for(let o=0;o<need.length;o+=CH){
+    const idxs=need.slice(o,o+CH), pts=idxs.map(i=>points[i]);
+    let url='https://api.open-meteo.com/v1/forecast?latitude='+pts.map(p=>p.lat.toFixed(4)).join(',')
+      +'&longitude='+pts.map(p=>p.lon.toFixed(4)).join(',')
+      +'&hourly='+HOURLY+'&timezone=Europe%2FMadrid&timeformat=unixtime&forecast_days=3&wind_speed_unit=kmh';
+    if(S.model!=='best_match') url+='&models='+encodeURIComponent(S.model);
+    jobs.push(getJSON(url).then(j=>{
+      const arr=Array.isArray(j)?j:[j];
+      if(arr.length!==pts.length) throw new Error('Resposta inesperada d’Open-Meteo.');
+      arr.forEach((jj,m)=>{ const s=parseSeries(jj,pts[m]); S.cache.set(ckey(pts[m]),s); res[idxs[m]]=s; });
+    }));
+  }
+  await Promise.all(jobs);
+  if(res.every(s=>s.empty)) throw new Error('El model triat no té dades per a aquesta zona. Prova el model automàtic.');
+  return res;
+}
+
+/* ---------- Estat visual ---------- */
+function setChip(id,state,text,title){
+  const el=$(id); el.className='chip '+state; el.lastElementChild.textContent=text; el.title=title||'';
+}
+function banner(msg,retry){
+  const b=$('#banner'); b.textContent='';
+  if(!msg){ b.hidden=true; return; }
+  b.hidden=false; b.appendChild(document.createTextNode(msg));
+  if(retry){ const bt=document.createElement('button'); bt.type='button'; bt.className='btn sm'; bt.textContent='Torna-ho a provar'; bt.addEventListener('click',retry); b.appendChild(bt); }
+}
+const curT=()=>S.times[S.idx];
+const findIdx=ms=>{ let r=0; for(let i=0;i<S.times.length;i++) if(S.times[i]<=ms) r=i; return r; };
+
+/* ---------- Mapa ---------- */
+function arrowHTML(w,o){
+  const size=24+Math.min(w.spd,50)*0.2;
+  return '<div class="wxm'+(o.obs?' obs':'')+(o.metar?' metar':'')+'"><svg viewBox="-20 -20 40 40" width="'+size.toFixed(0)+'" height="'+size.toFixed(0)+'" style="transform:rotate('+(w.dir+180).toFixed(0)+'deg)">'
+   +'<path d="M0,-17 L10,3 L3.5,0.5 L3.5,16 L-3.5,16 L-3.5,0.5 L-10,3 Z" fill="'+windColor(w.spd)+'" stroke="rgba(8,24,32,.8)" stroke-width="1.6" stroke-linejoin="round"/></svg><b>'+Math.round(w.spd)+'</b></div>';
+}
+function windMarker(ll,w,o){
+  return L.marker(ll,{icon:L.divIcon({html:arrowHTML(w,o),className:'',iconSize:[44,44],iconAnchor:[22,22]}),title:o.title||'',keyboard:false,riseOnHover:true});
+}
+function windText(w){
+  return 'vent '+windWord(w.spd)+' de '+c16(w.dir)+' ('+local8(w.dir)+') · '+Math.round(w.spd)+' km/h'+(isNum(w.gst)?', ratxes '+Math.round(w.gst):'');
+}
+function initMap(){
+  const dark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+  map=L.map('map',{minZoom:4,maxZoom:18,maxBounds:[[-85,-180],[85,180]],maxBoundsViscosity:1}).fitBounds(SPAIN_BOUNDS);
+  map.createPane('labels'); map.getPane('labels').style.zIndex=300; map.getPane('labels').style.pointerEvents='none';
+  const ES='https://server.arcgisonline.com/ArcGIS/rest/services/', T=p=>ES+p+'/MapServer/tile/{z}/{y}/{x}';
+  BASEDEFS={
+    'Gris suau':{url:T(dark?'Canvas/World_Dark_Gray_Base':'Canvas/World_Light_Gray_Base'),ref:T(dark?'Canvas/World_Dark_Gray_Reference':'Canvas/World_Light_Gray_Reference'),nz:16,dark:dark,attr:'Tiles © Esri'},
+    'Carrers (Esri)':{url:T('World_Street_Map'),nz:19,dark:false,attr:'Tiles © Esri'},
+    'Topogràfic (Esri)':{url:T('World_Topo_Map'),nz:19,dark:false,attr:'Tiles © Esri'},
+    'OpenStreetMap':{url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',nz:19,dark:false,attr:'© OpenStreetMap contributors'},
+    'Satèl·lit (Esri)':{url:T('World_Imagery'),nz:19,dark:true,attr:'Tiles © Esri'}
+  };
+  const bases={};
+  Object.keys(BASEDEFS).forEach(k=>{ const d=BASEDEFS[k]; bases[k]=L.tileLayer(d.url,{maxNativeZoom:d.nz,maxZoom:18,attribution:d.attr}); });
+  let start='Gris suau'; try{ const sv=localStorage.getItem('vent.base'); if(sv&&bases[sv]) start=sv; }catch(e){}
+  L.control.layers(bases,null,{position:'topright'}).addTo(map);
+  bases[start].addTo(map); setRef(start);
+  map.on('baselayerchange',e=>{ setRef(e.name); try{ localStorage.setItem('vent.base',e.name); }catch(err){} });
+  L_grid=L.layerGroup().addTo(map); L_obs=L.layerGroup().addTo(map);
+  L_route=L.layerGroup().addTo(map); L_rarrows=L.layerGroup().addTo(map); L_misc=L.layerGroup().addTo(map);
+  initFX();
+  map.on('click',e=>choosePoint(e.latlng.lat,e.latlng.lng));
+  map.on('zoomstart',hideFX);
+  map.on('moveend',()=>{ layoutFX(); showFX(); FX.parts=[]; if(FX.pctx) FX.pctx.clearRect(0,0,FX.w,FX.h); scheduleFX(); clearTimeout(S.gridTimer); S.gridTimer=setTimeout(loadGrid,700); });
+}
+function setRef(name){
+  const d=BASEDEFS[name]; if(!d) return;
+  if(refLayer){ map.removeLayer(refLayer); refLayer=null; }
+  if(d.ref) refLayer=L.tileLayer(d.ref,{pane:'labels',maxNativeZoom:16,maxZoom:18}).addTo(map);
+  S.baseDark=!!d.dark;
+}
+
+/* ---------- Capa de vent: color suau + línies animades ---------- */
+const FX={cc:null,pc:null,cctx:null,pctx:null,small:null,field:null,parts:[],w:0,h:0,dpr:1,hidden:false,pending:false};
+function initFX(){
+  map.createPane('wind');
+  const pane=map.getPane('wind'); pane.style.zIndex=250; pane.style.pointerEvents='none';
+  FX.cc=document.createElement('canvas'); FX.pc=document.createElement('canvas');
+  [FX.cc,FX.pc].forEach(c=>{ c.style.position='absolute'; c.style.left='0'; c.style.top='0'; c.style.pointerEvents='none'; pane.appendChild(c); });
+  FX.cctx=FX.cc.getContext('2d'); FX.pctx=FX.pc.getContext('2d'); FX.small=document.createElement('canvas');
+  layoutFX();
+  requestAnimationFrame(stepFX);
+}
+function layoutFX(){
+  if(!FX.cc) return;
+  const s=map.getSize(); FX.w=s.x; FX.h=s.y; FX.dpr=Math.min(2,window.devicePixelRatio||1);
+  [FX.cc,FX.pc].forEach(c=>{
+    c.width=Math.max(1,Math.round(s.x*FX.dpr)); c.height=Math.max(1,Math.round(s.y*FX.dpr));
+    c.style.width=s.x+'px'; c.style.height=s.y+'px';
+    L.DomUtil.setPosition(c,map.containerPointToLayerPoint([0,0]));
+  });
+}
+function hideFX(){ FX.hidden=true; if(FX.cc){ FX.cc.style.opacity=0; FX.pc.style.opacity=0; } }
+function showFX(){ FX.hidden=false; if(FX.cc){ FX.cc.style.opacity=1; FX.pc.style.opacity=1; } }
+function scheduleFX(){ if(FX.pending) return; FX.pending=true; requestAnimationFrame(()=>{ FX.pending=false; rebuildFX(); }); }
+function clearFX(){
+  FX.field=null; FX.parts=[];
+  if(FX.cctx){ FX.cctx.setTransform(1,0,0,1,0,0); FX.cctx.clearRect(0,0,FX.cc.width,FX.cc.height); }
+  if(FX.pctx){ FX.pctx.setTransform(1,0,0,1,0,0); FX.pctx.clearRect(0,0,FX.pc.width,FX.pc.height); }
+}
+function rebuildFX(){
+  if(!FX.cc||!map) return;
+  if(!S.times.length||!S.grid||!S.grid.length||!S.gridStep||!(S.fx.color||S.fx.anim)){ clearFX(); return; }
+  const t=curT(), pts=[];
+  S.grid.forEach(s=>{ const w=windAt(s,t); if(!w) return; const p=map.latLngToContainerPoint([s.lat,s.lon]); pts.push({x:p.x,y:p.y,e:w.e,n:w.n}); });
+  if(!pts.length){ clearFX(); return; }
+  const g=S.gridStep, p0=map.latLngToContainerPoint([g.lat,g.lon]), p1=map.latLngToContainerPoint([g.lat,g.lon+g.sx]), p2=map.latLngToContainerPoint([g.lat+g.sy,g.lon]);
+  const cutoff=1.35*Math.max(Math.abs(p1.x-p0.x),Math.abs(p2.y-p0.y),20);
+  const cell=18, cols=Math.ceil(FX.w/cell)+2, rows=Math.ceil(FX.h/cell)+2;
+  FX.field=idwField(pts,cols,rows,cell,cutoff);
+  drawColor();
+  if(S.fx.anim){ if(!FX.parts.length) seedParticles(); }
+  else { FX.parts=[]; FX.pctx.setTransform(1,0,0,1,0,0); FX.pctx.clearRect(0,0,FX.pc.width,FX.pc.height); }
+}
+function drawColor(){
+  const f=FX.field, sm=FX.small, ctx=FX.cctx;
+  ctx.setTransform(FX.dpr,0,0,FX.dpr,0,0); ctx.clearRect(0,0,FX.w,FX.h);
+  if(!S.fx.color||!f) return;
+  sm.width=f.cols; sm.height=f.rows;
+  const sctx=sm.getContext('2d'), img=sctx.createImageData(f.cols,f.rows);
+  for(let i=0;i<f.cols*f.rows;i++){
+    if(!f.M[i]) continue;
+    const c=windRGB(Math.hypot(f.U[i],f.V[i]));
+    img.data[4*i]=c[0]; img.data[4*i+1]=c[1]; img.data[4*i+2]=c[2]; img.data[4*i+3]=118;
+  }
+  sctx.putImageData(img,0,0);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(sm,-f.cell/2,-f.cell/2,f.cols*f.cell,f.rows*f.cell);
+}
+function seedParticles(){
+  const dens=document.documentElement.classList.contains('m')?1100:650, n=clamp(Math.round(FX.w*FX.h/dens),220,2600);
+  FX.parts=[]; for(let i=0;i<n;i++) FX.parts.push({x:Math.random()*FX.w,y:Math.random()*FX.h,age:Math.floor(Math.random()*100)});
+}
+function stepFX(){
+  requestAnimationFrame(stepFX);
+  const f=FX.field;
+  if(!S.fx.anim||!f||FX.hidden||document.hidden||!FX.parts.length) return;
+  const ctx=FX.pctx, K=0.07;
+  ctx.setTransform(FX.dpr,0,0,FX.dpr,0,0);
+  ctx.globalCompositeOperation='destination-out'; ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(0,0,FX.w,FX.h);
+  ctx.globalCompositeOperation='source-over'; ctx.lineWidth=1.3; ctx.lineCap='round';
+  ctx.strokeStyle=S.baseDark?'rgba(255,255,255,.85)':'rgba(8,30,45,.8)';
+  ctx.beginPath();
+  for(let k=0;k<FX.parts.length;k++){
+    const p=FX.parts[k], c=Math.floor((p.x+f.cell/2)/f.cell), r=Math.floor((p.y+f.cell/2)/f.cell);
+    let ok=false;
+    if(c>=0&&r>=0&&c<f.cols&&r<f.rows){
+      const i=r*f.cols+c;
+      if(f.M[i]){ const nx=p.x+f.U[i]*K, ny=p.y-f.V[i]*K; ctx.moveTo(p.x,p.y); ctx.lineTo(nx,ny); p.x=nx; p.y=ny; ok=true; }
+    }
+    if(!ok||++p.age>110||p.x<0||p.y<0||p.x>FX.w||p.y>FX.h){ p.x=Math.random()*FX.w; p.y=Math.random()*FX.h; p.age=0; }
+  }
+  ctx.stroke();
+}
+
+/* ---------- Fletxes de la graella ---------- */
+function dataNeeded(){ return S.fx.color||S.fx.anim||S.fx.arrows; }
+function drawGrid(){
+  L_grid.clearLayers();
+  if(!S.fx.arrows||!S.grid||!S.times.length) return;
+  const t=curT();
+  S.grid.forEach(s=>{
+    const w=windAt(s,t); if(!w) return;
+    const m=windMarker([s.lat,s.lon],w,{title:windText(w)});
+    m.on('click',()=>setPoint({label:'Punt '+s.lat.toFixed(2)+', '+s.lon.toFixed(2),lat:s.lat,lon:s.lon,series:s},true));
+    L_grid.addLayer(m);
+  });
+}
+async function loadGrid(){
+  if(!map||!S.times.length||!dataNeeded()) return;
+  if(Date.now()<S.gridBlock) return;
+  const b=map.getBounds(), z=map.getZoom();
+  const lat=makeLattice({south:b.getSouth(),west:b.getWest(),north:b.getNorth(),east:b.getEast()},z,150);
+  if(!lat.pts.length) return;
+  const key=S.model+'|'+lat.sx+'|'+lat.sy+'|'+lat.pts[0].lat+','+lat.pts[0].lon+'|'+lat.pts.length;
+  if(key===S.gridKey) return;
+  const tok=++S.gridTok;
+  try{
+    const series=await fetchForecast(lat.pts);
+    if(tok!==S.gridTok) return;
+    S.grid=series.filter(s=>!s.empty); S.gridStep={sx:lat.sx,sy:lat.sy,lat:lat.pts[0].lat,lon:lat.pts[0].lon}; S.gridKey=key;
+    if(S.gridErr){ S.gridErr=false; banner(null); }
+    drawGrid(); scheduleFX();
+  }catch(e){
+    if(tok!==S.gridTok) return;
+    if(/límit/.test(e.message)) S.gridBlock=Date.now()+60000;
+    S.gridErr=true; banner('No s’ha pogut carregar el pronòstic d’aquesta vista del mapa: '+e.message,()=>{ S.gridBlock=0; S.gridKey=''; loadGrid(); });
+  }
+}
+
+/* ---------- Sensors ---------- */
+function drawObs(){
+  L_obs.clearLayers();
+  if(!S.showObs) return;
+  S.stations.forEach(st=>{
+    const w={spd:st.spd,dir:st.dir,gst:null};
+    const m=windMarker([st.lat,st.lon],w,{obs:true,metar:st.src==='metar',title:st.name+': '+Math.round(st.spd)+' km/h de '+c16(st.dir)});
+    m.bindPopup(()=>stationPopup(st),{minWidth:230});
+    m.on('popupopen',ev=>{
+      const el=ev.popup.getElement(), btn=el&&el.querySelector('[data-cmp]'), out=el&&el.querySelector('[data-out]');
+      if(!btn) return;
+      btn.addEventListener('click',async()=>{
+        btn.disabled=true; out.textContent='Consultant el model…';
+        try{
+          const [s]=await fetchForecast([{lat:st.lat,lon:st.lon}]);
+          const w2=windAt(s,st.tms);
+          out.innerHTML=w2?('Model a les '+fmtHM(st.tms)+': <b>'+Math.round(w2.spd)+' km/h de '+c16(w2.dir)+'</b><br>Diferència: '+(w2.spd-st.spd>=0?'+':'−')+Math.abs(Math.round(w2.spd-st.spd))+' km/h, direcció '+Math.abs(Math.round(angDiffD(w2.dir,st.dir)))+'° diferent.'):'El model no cobreix aquesta hora.';
+        }catch(e){ out.textContent='No s’ha pogut consultar el model: '+e.message; }
+      });
+    });
+    L_obs.addLayer(m);
+  });
+}
+function angDiffD(a,b){ const d=norm360(a-b); return d>180?d-360:d; }
+function stationPopup(st){
+  const age=Math.max(0,Math.round((Date.now()-st.t1)/60000));
+  const when=st.src==='metar'?('Observació de les <b>'+fmtHM(st.t1)+'</b>'):('Mesurat de <b>'+fmtHM(st.t0)+'</b> a <b>'+fmtHM(st.t1)+'</b>');
+  return '<b>'+esc(st.name)+'</b><br><span class="muted small">'+(st.src==='metar'?'Aeroport (METAR)':'Meteocat (XEMA)')+(st.town?' · '+esc(st.town):'')+(st.alt?' · '+esc(st.alt)+' m':'')+'</span><br>'
+   +when+' (fa '+age+' min):<br><b>'+Math.round(st.spd)+' km/h de '+c16(st.dir)+'</b> ('+local8(st.dir)+', '+Math.round(st.dir)+'°)'+(isNum(st.gst)?', ratxes '+Math.round(st.gst)+' km/h':'')+'<br>'
+   +'<button class="btn sm" data-cmp type="button" style="margin-top:6px">Compara amb el pronòstic</button><div data-out class="small" style="margin-top:6px"></div>';
+}
+async function loadXema(){
+  const since=new Date(Date.now()-4*3600e3).toISOString().slice(0,19);
+  const base='https://analisi.transparenciacatalunya.cat/resource/';
+  const q=w=>base+'nzvn-apee.json?$where='+encodeURIComponent(w)+'&$order='+encodeURIComponent('data_lectura DESC')+'&$limit=20000';
+  const getObs=async()=>{
+    try{ return await getJSON(q("codi_variable in('30','31') AND data_lectura > '"+since+"'")); }
+    catch(e){ return await getJSON(q("codi_variable in(30,31) AND data_lectura > '"+since+"'")); }
+  };
+  const [meta,data]=await Promise.all([getJSON(base+'yqwd-vj5e.json?$limit=2000'),getObs()]);
+  const info={};
+  meta.forEach(m=>{
+    let la=parseFloat(m.latitud), lo=parseFloat(m.longitud);
+    if(!isFinite(la)||!isFinite(lo)){
+      const g=m.georeferencia||m.coordenades_geo||m.geocoded_column||m.location;
+      if(g&&g.coordinates){lo=g.coordinates[0];la=g.coordinates[1];}
+      else if(g){la=parseFloat(g.latitude);lo=parseFloat(g.longitude);}
+    }
+    if(isFinite(la)&&isFinite(lo)) info[m.codi_estacio]={name:m.nom_estacio||m.codi_estacio,town:m.nom_municipi,alt:m.altitud,lat:la,lon:lo};
+  });
+  const obs={};
+  data.forEach(r=>{
+    const raw=(r.valor_lectura!==undefined)?r.valor_lectura:r.valor, v=parseFloat(raw);
+    if(!isFinite(v)) return;
+    const st=(obs[r.codi_estacio]=obs[r.codi_estacio]||{});
+    const slot=(st[r.data_lectura]=st[r.data_lectura]||{});
+    if(String(r.codi_variable)==='30') slot.spd=v*3.6; else if(String(r.codi_variable)==='31') slot.dir=v;
+  });
+  const out=[];
+  Object.keys(obs).forEach(id=>{
+    if(!info[id]) return;
+    const ts=Object.keys(obs[id]).filter(k=>isNum(obs[id][k].spd)&&isNum(obs[id][k].dir)).sort();
+    if(!ts.length) return;
+    const k=ts[ts.length-1], t0=Date.parse(k.endsWith('Z')?k:k+'Z');   /* data_lectura = inici de l'interval, en UTC */
+    if(!isFinite(t0)) return;
+    const t1=t0+30*60000;
+    if(Date.now()-t1>3*3600e3) return;
+    out.push(Object.assign({id,src:'xema',t0,t1,tms:t0+15*60000,spd:obs[id][k].spd,dir:norm360(obs[id][k].dir),gst:null},info[id]));
+  });
+  return out;
+}
+async function loadMetar(){
+  const j=await getJSON('https://aviationweather.gov/api/data/metar?bbox=27,-19,44.5,5&format=json&hours=3');
+  if(!Array.isArray(j)) throw new Error('resposta inesperada');
+  const best={};
+  j.forEach(o=>{ const id=o.icaoId; if(!id||!isNum(o.lat)||!isNum(o.lon)||!isNum(o.obsTime)) return; if(!best[id]||o.obsTime>best[id].obsTime) best[id]=o; });
+  const out=[];
+  Object.keys(best).forEach(id=>{
+    const o=best[id], tms=o.obsTime*1000;
+    if(!isNum(o.wdir)||!isNum(o.wspd)||o.wspd<=0) return;
+    if(Date.now()-tms>3*3600e3) return;
+    out.push({id,src:'metar',name:(o.name||id).replace(/,.*$/,'')+' ('+id+')',town:'',alt:isNum(o.elev)?Math.round(o.elev):null,lat:o.lat,lon:o.lon,t0:tms,t1:tms,tms:tms,spd:o.wspd*1.852,dir:norm360(o.wdir),gst:isNum(o.wgst)?o.wgst*1.852:null});
+  });
+  return out;
+}
+async function loadStations(){
+  S.obsAt=Date.now();
+  setChip('#chipObs','load','Sensors: carregant…');
+  const [x,m]=await Promise.allSettled([loadXema(),loadMetar()]);
+  S.stationsX=x.status==='fulfilled'?x.value:[]; S.stationsM=m.status==='fulfilled'?m.value:[];
+  S.stations=S.stationsX.concat(S.stationsM); drawObs();
+  const newest=S.stations.reduce((a,s)=>Math.max(a,s.t1),0);
+  const parts=[];
+  parts.push(x.status==='fulfilled'?S.stationsX.length+' Meteocat':'Meteocat no disponible');
+  parts.push(m.status==='fulfilled'?S.stationsM.length+' aeroports':'aeroports no disponibles');
+  const why=(x.status==='rejected'?'Meteocat: '+x.reason.message+'. ':'')+(m.status==='rejected'?'Aeroports: '+m.reason.message+'.':'');
+  if(S.stations.length) setChip('#chipObs','ok','Sensors: '+parts.join(' · ')+' · últim registre '+fmtHM(newest),why);
+  else setChip('#chipObs','err','Sensors: '+(x.status==='rejected'&&m.status==='rejected'?'no disponibles':'cap lectura recent'),why);
+  if(S.route) renderSensors();
+}
+
+/* ---------- Temps i punt seleccionat ---------- */
+function initTimes(t){
+  const prev=S.times.length?curT():Date.now();
+  S.times=t;
+  const sl=$('#slider'); sl.max=t.length-1;
+  S.idx=findIdx(prev); sl.value=S.idx;
+  S.dayStarts=t.filter(x=>mp(x).h===0);
+  const sel=$('#startDay'); sel.innerHTML=S.dayStarts.map((d,i)=>'<option value="'+i+'">'+esc(fmtDay(d))+'</option>').join('');
+  buildAxis();
+}
+function buildAxis(){
+  const n=S.times.length; if(n<2) return;
+  let h='';
+  S.times.forEach((t,i)=>{ if(mp(t).h===0) h+='<span'+(i===0?' class="first"':'')+' style="left:'+(i/(n-1)*100).toFixed(2)+'%">'+esc(fmtDay(t))+'</span>'; });
+  const x=(Date.now()-S.times[0])/3600000/(n-1)*100;
+  if(x>=0&&x<=100) h+='<i style="left:'+x.toFixed(2)+'%" title="ara"></i>';
+  $('#axis').innerHTML=h;
+}
+function setIdx(i){
+  S.idx=clamp(i,0,S.times.length-1);
+  $('#slider').value=S.idx;
+  if(S.rafPending) return;
+  S.rafPending=true;
+  requestAnimationFrame(()=>{ S.rafPending=false; refreshTime(); });
+}
+function refreshTime(){
+  if(!S.times.length) return;
+  $('#tLabel').textContent=fmtFull(curT());
+  drawGrid(); scheduleFX(); renderZones(); updateSel(); updatePointInfo(); updateRider();
+}
+function setPoint(p){
+  S.point=p;
+  if(pinMarker) L_misc.removeLayer(pinMarker);
+  pinMarker=L.circleMarker([p.lat,p.lon],{radius:7,color:'#fff',weight:2,fillColor:'#0b6e8f',fillOpacity:1}).addTo(L_misc);
+  pinMarker.bindTooltip(p.label);
+  renderTimeline(); updatePointInfo();
+}
+async function choosePoint(lat,lon,label){
+  if(!S.times.length) return;
+  $('#pInfo').textContent='Consultant el pronòstic del punt…';
+  try{
+    const [s]=await fetchForecast([{lat,lon}]);
+    if(s.empty) throw new Error('Sense dades del model en aquest punt.');
+    setPoint({label:label||('Punt '+lat.toFixed(3)+', '+lon.toFixed(3)),lat,lon,series:s});
+  }catch(e){ $('#pInfo').textContent='No s’ha pogut obtenir el vent d’aquest punt: '+e.message; }
+}
+function updatePointInfo(){
+  const p=S.point; if(!p||!S.times.length) return;
+  const w=windAt(p.series,curT());
+  $('#pInfo').innerHTML='<b>'+esc(p.label)+'</b> · '+fmtFull(curT())+(w?': '+esc(windText(w))+(isNum(w.tmp)?', '+Math.round(w.tmp)+' °C':'')+(w.pr>=0.2?', pluja '+w.pr.toFixed(1)+' mm/h':''):': sense dades del model a aquesta hora');
+}
+function renderZones(){
+  const el=$('#zones'); if(!S.zones.length||!S.times.length){el.innerHTML='';return;}
+  const t=curT(); $('#zonesTime').textContent='Pronòstic per a '+fmtFull(t);
+  let last='';
+  el.innerHTML=S.zones.map((z,i)=>{
+    let h=''; if(z.g!==last){ last=z.g; h='<div class="zgrp">'+esc(z.g)+'</div>'; }
+    const w=z.series&&!z.series.empty?windAt(z.series,t):null;
+    if(!w) return h+'<button class="zone" data-z="'+i+'" type="button"><span></span><span><span class="nm">'+esc(z.n)+'</span></span><span class="v">—</span></button>';
+    return h+'<button class="zone" data-z="'+i+'" type="button"><svg width="28" height="28" viewBox="-20 -20 40 40" style="transform:rotate('+(w.dir+180).toFixed(0)+'deg)"><path d="'+ARROW_D+'" fill="'+windColor(w.spd)+'" stroke="rgba(8,24,32,.75)" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+      +'<span><span class="nm">'+esc(z.n)+'</span><span class="sub">'+c16(w.dir)+' · '+local8(w.dir)+' · ratxes '+Math.round(w.gst)+'</span></span><span class="v">'+Math.round(w.spd)+'<small>km/h</small></span></button>';
+  }).join('');
+}
+
+/* ---------- Barra del temps (vent hora a hora d'un punt) ---------- */
+const ARROW_D='M0,-17 L10,3 L3.5,0.5 L3.5,16 L-3.5,16 L-3.5,0.5 L-10,3 Z';
+const TL={cw:40,ml:44,mr:14,H:262,cT:100,cB:200};
+function runsOf(arr,X,Y){
+  const out=[]; let cur=null;
+  arr.forEach((v,i)=>{ if(isNum(v)){ if(!cur) cur=[]; cur.push([X(i),Y(v)]); } else if(cur){out.push(cur);cur=null;} });
+  if(cur) out.push(cur);
+  return out;
+}
+function renderTimeline(){
+  const host=$('#tl'), p=S.point;
+  if(!p){host.innerHTML='';return;}
+  const s=p.series, n=s.t.length, cw=TL.cw, ml=TL.ml, mr=TL.mr, H=TL.H, cT=TL.cT, cB=TL.cB, W=ml+mr+n*cw, aMid=28;
+  const vals=s.spd.concat(s.gst).filter(isNum);
+  const yMax=Math.max(30,Math.ceil(Math.max.apply(null,vals)*1.1/10)*10);
+  const X=i=>ml+(i+.5)*cw, Y=v=>cB-(v/yMax)*(cB-cT);
+  let g='';
+  for(let i=0;i<n;i++) if(s.day[i]===0) g+='<rect class="night" x="'+(ml+i*cw)+'" y="4" width="'+cw+'" height="'+(cB-4)+'"/>';
+  const stepY=yMax<=40?10:20;
+  for(let v=0;v<=yMax;v+=stepY) g+='<line class="gl" x1="'+ml+'" x2="'+(W-mr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'"/><text class="tx" x="'+(ml-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+v+'</text>';
+  g+='<text class="tx" x="4" y="'+(cT-6)+'">km/h</text>';
+  for(let i=0;i<n;i++){
+    const m=mp(s.t[i]);
+    if(m.h===0){ g+='<line class="gl d" x1="'+(ml+i*cw)+'" x2="'+(ml+i*cw)+'" y1="4" y2="'+(H-4)+'"/><text class="txi" x="'+(ml+i*cw+5)+'" y="'+(H-8)+'" style="font-weight:700">'+esc(fmtDay(s.t[i]))+'</text>'; }
+    if(m.h%3===0) g+='<text class="tx" x="'+X(i)+'" y="'+(cB+16)+'" text-anchor="middle">'+pad2(m.h)+'h</text>';
+  }
+  for(let i=0;i<n;i++) if(isNum(s.pr[i])&&s.pr[i]>0){ const h=Math.min(s.pr[i],4)/4*26; g+='<rect class="rain" x="'+(X(i)-10)+'" y="'+(cB-h)+'" width="20" height="'+h+'"/>'; }
+  runsOf(s.spd,X,Y).forEach(r=>{
+    if(r.length<2) return;
+    g+='<path d="M'+r[0][0]+','+cB+' L'+r.map(q=>q[0]+','+q[1]).join(' L')+' L'+r[r.length-1][0]+','+cB+' Z" fill="rgba(74,163,199,.28)"/>';
+    g+='<path d="M'+r.map(q=>q[0]+','+q[1]).join(' L')+'" fill="none" stroke="#2f8fb8" stroke-width="2.2" stroke-linejoin="round"/>';
+  });
+  runsOf(s.gst,X,Y).forEach(r=>{ if(r.length>1) g+='<path d="M'+r.map(q=>q[0]+','+q[1]).join(' L')+'" fill="none" style="stroke:var(--muted)" stroke-width="1.6" stroke-dasharray="5 4"/>'; });
+  for(let i=0;i<n;i++){
+    if(!isNum(s.spd[i])||!isNum(s.dir[i])) continue;
+    const k=0.5+Math.min(s.spd[i],40)/40*0.45;
+    g+='<g transform="translate('+X(i)+','+aMid+') rotate('+(s.dir[i]+180).toFixed(0)+') scale('+k.toFixed(2)+')"><path d="'+ARROW_D+'" fill="'+windColor(s.spd[i])+'" stroke="rgba(8,24,32,.75)" stroke-width="1.6" stroke-linejoin="round"/></g>';
+    g+='<text class="txi sp" x="'+X(i)+'" y="66" text-anchor="middle">'+Math.round(s.spd[i])+'</text>';
+    g+='<text class="tx" x="'+X(i)+'" y="79" text-anchor="middle" style="font-size:10px">'+c16(s.dir[i])+'</text>';
+  }
+  const x0=(Date.now()-s.t[0])/3600000;
+  if(x0>=0&&x0<=n-1) g+='<line x1="'+(ml+(x0+.5)*cw)+'" x2="'+(ml+(x0+.5)*cw)+'" y1="4" y2="'+cB+'" stroke="#e5702b" stroke-width="2"/><text x="'+(ml+(x0+.5)*cw+4)+'" y="'+(cT-6)+'" style="fill:#e5702b;font-weight:700">ara</text>';
+  g+='<rect id="tlSel" class="sel" x="'+(ml+S.idx*cw)+'" y="2" width="'+cw+'" height="'+(cB+2)+'" rx="3"/>';
+  for(let i=0;i<n;i++){
+    const w=windAt(s,s.t[i]);
+    const tip=fmtFull(s.t[i])+(w?': '+windText(w)+(isNum(w.tmp)?', '+Math.round(w.tmp)+' °C':'')+(w.pr>=0.2?', pluja '+w.pr.toFixed(1)+' mm':''):': sense dades');
+    g+='<rect x="'+(ml+i*cw)+'" y="0" width="'+cw+'" height="'+cB+'" fill="transparent"><title>'+esc(tip)+'</title></rect>';
+  }
+  host.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Vent hora a hora al punt seleccionat">'+g+'</svg>';
+  host.onclick=e=>{
+    const r=host.querySelector('svg').getBoundingClientRect();
+    setIdx(clamp(Math.floor((e.clientX-r.left-ml)/cw),0,n-1));
+  };
+}
+function updateSel(){
+  const r=$('#tlSel'), host=$('#tl'); if(!r||!S.point) return;
+  const i=Math.round((curT()-S.point.series.t[0])/3600000);
+  r.setAttribute('x',TL.ml+i*TL.cw);
+  const target=TL.ml+(i+.5)*TL.cw-host.clientWidth/2;
+  if(Math.abs(host.scrollLeft-target)>host.clientWidth*0.3||S.playing) host.scrollLeft=target;
+}
+function togglePlay(){
+  const b=$('#play');
+  if(S.playing){ clearInterval(S.playing); S.playing=null; b.textContent='Reprodueix'; return; }
+  b.textContent='Pausa';
+  S.playing=setInterval(()=>{ setIdx(S.idx>=S.times.length-1?0:S.idx+1); },800);
+}
+
+/* ---------- GPX ---------- */
+function parseGPX(text){
+  const doc=new DOMParser().parseFromString(text,'application/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('El fitxer no és un GPX vàlid.');
+  let nodes=Array.prototype.slice.call(doc.getElementsByTagName('trkpt'));
+  if(nodes.length<2) nodes=Array.prototype.slice.call(doc.getElementsByTagName('rtept'));
+  if(nodes.length<2) throw new Error('El GPX no conté cap track ni ruta amb punts.');
+  const pts=[];
+  nodes.forEach(n=>{
+    const lat=parseFloat(n.getAttribute('lat')), lon=parseFloat(n.getAttribute('lon'));
+    if(!isFinite(lat)||!isFinite(lon)) return;
+    const e=n.getElementsByTagName('ele')[0], ele=e?parseFloat(e.textContent):NaN;
+    pts.push({lat,lon,ele:isFinite(ele)?ele:null});
+  });
+  if(pts.length<2) throw new Error('El GPX no té prou punts vàlids.');
+  const nm=doc.getElementsByTagName('name')[0];
+  return {pts,name:nm&&nm.textContent.trim()};
+}
+async function loadGPXFile(file){
+  if(!file) return;
+  if(!S.times.length){ banner('Espera que es carregui el pronòstic abans de carregar la ruta.'); return; }
+  $('#fileTxt').textContent='Processant '+file.name+'…';
+  try{
+    const g=parseGPX(await file.text());
+    const R=buildRoute(g.pts);
+    S.routeName=g.name||file.name.replace(/\.[^.]+$/,'');
+    await fetchRouteSeries(R);
+    S.route=R;
+    S.speed=clamp(parseFloat($('#speed').value)||25,8,60);
+    $('#startFields').hidden=false; $('#routeOut').hidden=false;
+    $('#fileTxt').textContent='Ruta carregada: '+file.name;
+    $('#fileHint').textContent='Pots carregar-ne una altra quan vulguis.';
+    S.fx.arrows=false; $('#optArrows').checked=false; drawGrid();
+    recomputeRoute(true);
+    map.fitBounds(L.latLngBounds(R.pts.map(p=>[p.lat,p.lon])),{padding:[30,30]});
+    $('#routeOut').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    $('#fileTxt').textContent=S.route?'Carrega un altre GPX':'Carrega un fitxer GPX';
+    banner('No s’ha pogut carregar la ruta: '+e.message);
+  }
+}
+async function fetchRouteSeries(R){
+  const series=await fetchForecast(R.coarse.map(c=>({lat:c.lat,lon:c.lon})));
+  if(series.some(s=>s.empty)) throw new Error('El model seleccionat no cobreix tota la ruta. Prova el model automàtic.');
+  R.coarse.forEach((c,i)=>{ c.series=series[i]; });
+}
+function clearRoute(){
+  S.namesToken++; $('#namesBtn').disabled=false; $('#namesStatus').textContent='';
+  S.route=null;S.ride=null;S.cands=[];S.best=null;
+  $('#routeOut').hidden=true; $('#startFields').hidden=true;
+  $('#fileTxt').textContent='Carrega un fitxer GPX'; $('#file').value='';
+  $('#fileHint').textContent='Al mòbil, tria’l de “Fitxers”. A l’ordinador també pots arrossegar-lo al mapa. Sense GPX, l’eina mostra el vent d’Espanya sencera.';
+  L_route.clearLayers(); L_rarrows.clearLayers();
+  if(riderMarker){L_misc.removeLayer(riderMarker);riderMarker=null;}
+  if(hoverMarker){L_misc.removeLayer(hoverMarker);hoverMarker=null;}
+  S.fx.arrows=true; $('#optArrows').checked=true; loadGrid(); drawGrid();
+  map.fitBounds(CAT_BOUNDS);
+}
+
+/* Recalcula candidats i, si cal, tria la millor hora */
+function recomputeRoute(chooseBest){
+  const R=S.route; if(!R) return;
+  S.cands=candidates(R,S.speed,S.times,Date.now());
+  S.best=S.cands.length?pickBest(S.cands,S.allowNight):null;
+  let ms=null;
+  if(!chooseBest&&S.ride) ms=S.ride.startMs;
+  let r=ms!==null?evalRide(R,ms,S.speed,true):null;
+  if(!r&&S.best) r=evalRide(R,S.best.startMs,S.speed,true);
+  S.ride=r;
+  if(!r){
+    banner('El pronòstic disponible no cobreix el temps que trigaràs a fer la ruta. Puja la velocitat, tria un altre model o prova-ho més tard.');
+  }
+  renderRoute();
+}
+function syncStartInputs(){
+  if(!S.ride) return;
+  const m=mp(S.ride.startMs);
+  let di=0; S.dayStarts.forEach((d,i)=>{ const q=mp(d); if(q.y===m.y&&q.m===m.m&&q.d===m.d) di=i; });
+  $('#startDay').value=di; $('#startTime').value=pad2(m.h)+':'+pad2(m.mi);
+}
+function onStartInput(){
+  if(!S.route) return;
+  const di=+$('#startDay').value, tv=$('#startTime').value; if(!tv||!S.dayStarts.length) return;
+  const [hh,mm]=tv.split(':').map(Number);
+  const ms=S.dayStarts[di]+(hh*60+mm)*60000;
+  const r=evalRide(S.route,ms,S.speed,true);
+  if(!r){ banner('No hi ha pronòstic per a tota la ruta a aquesta hora de sortida. Tria una hora més aviat.'); return; }
+  banner(null); S.ride=r; renderRoute();
+}
+function selectStartMs(ms){
+  const r=evalRide(S.route,ms,S.speed,true); if(!r) return;
+  S.ride=r; renderRoute();
+}
+
+/* ---------- Sortida de ruta ---------- */
+const relCls=h=>h>3?'head':h<-3?'tail':'';
+const sgn=x=>(x>=0?'+':'−')+Math.abs(Math.round(x));
+function placeName(c){ return c.name?esc(c.name):(c.lat.toFixed(3)+', '+c.lon.toFixed(3)); }
+function renderRoute(){
+  const R=S.route; if(!R) return;
+  if(!S.ride){
+    $('#rTitle').textContent=S.routeName; $('#rSummary').innerHTML='<p>Sense pronòstic suficient per calcular la ruta.</p>';
+    return;
+  }
+  syncStartInputs();
+  renderSummary(); renderSplit(); renderBest(); renderStartChart(); renderProfile(); renderNarr(); renderTable(); renderSensors(); drawRouteLayers(); updateRider();
+}
+function renderSummary(){
+  const R=S.route,r=S.ride;
+  $('#rTitle').textContent=S.routeName||'Ruta';
+  const st=(l,v,sub,cls)=>'<div class="stat"><span>'+l+'</span><b class="'+(cls||'')+'">'+v+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</div>';
+  const sav=100-r.idx;
+  $('#rSummary').innerHTML=
+    st('Distància',R.total.toFixed(1)+' km','')
+   +st('Durada estimada',fmtDur(R.total/S.speed),'a '+S.speed+' km/h de mitjana')
+   +st('Sortida → arribada',fmtHM(r.startMs)+' → '+fmtHM(r.endMs),fmtDay(r.startMs))
+   +st('Vent de cara mitjà',sgn(r.meanHead)+' km/h',r.meanHead>=0?'de cara en conjunt':'de cua en conjunt',relCls(r.meanHead))
+   +st('Esforç contra l’aire',(sav>=0?'−':'+')+Math.abs(sav).toFixed(0)+' %','respecte a un dia sense vent',sav>=0?'tail':'head')
+   +(R.hasEle?st('Desnivell positiu','+'+Math.round(R.gain)+' m','aproximat, segons el GPX'):'')
+   +st('Ratxa màxima',Math.round(r.maxGust)+' km/h','a algun punt de la ruta',r.maxGust>=50?'head':'')
+   +st('Pluja',r.rainShare>0?Math.round(r.rainShare*100)+' % del recorregut':'cap prevista',r.maxPr>=0.2?'fins a '+r.maxPr.toFixed(1)+' mm/h':'',r.rainShare>0?'head':'');
+}
+function renderSplit(){
+  const r=S.ride, el=$('#rSplit'); if(!r||!r.fine){ el.innerHTML=''; return; }
+  let a=0,c=0; r.fine.forEach(p=>{ if(p.head>=4) a++; else if(p.head<=-4) c++; });
+  const n=r.fine.length, pa=Math.round(a/n*100), pc=Math.round(c/n*100), pb=Math.max(0,100-pa-pc);
+  el.innerHTML='<div class="s3" role="img" aria-label="Repartiment del vent al llarg de la ruta"><span style="width:'+pa+'%;background:var(--head)"></span><span style="width:'+pb+'%;background:#e3b93c"></span><span style="width:'+pc+'%;background:var(--tail)"></span></div>'
+   +'<div class="lab"><span><b class="head">'+pa+' %</b> del recorregut amb vent de cara</span><span><b>'+pb+' %</b> lateral o neutre</span><span><b class="tail">'+pc+' %</b> amb vent de cua</span></div>';
+}
+function renderBest(){
+  const b=S.best,r=S.ride,el=$('#rBest');
+  if(!b){ el.innerHTML='<p>No hi ha prou hores de pronòstic per proposar una sortida.</p>'; return; }
+  const sav=100-b.idx;
+  const worst=S.cands.reduce((a,x)=>(!a||x.idx>a.idx)?x:a,null);
+  let h='<p class="big">Surt a les '+fmtHM(b.startMs)+' <span class="muted" style="font-weight:500">('+esc(fmtDay(b.startMs))+')</span></p>';
+  h+='<p>Arribaràs cap a les '+fmtHM(b.endMs)+'. Vent de cara mitjà de <b class="'+relCls(b.meanHead)+'">'+sgn(b.meanHead)+' km/h</b>, ratxes màximes de '+Math.round(b.maxGust)+' km/h. Faràs un <b class="'+(sav>=0?'tail':'head')+'">'+Math.abs(sav).toFixed(0)+' % '+(sav>=0?'menys':'més')+'</b> d’esforç contra l’aire que amb calma total';
+  if(worst&&worst.idx-b.idx>=3){ const sw=100-worst.idx; h+='; a la pitjor hora ('+fmtHM(worst.startMs)+', '+esc(fmtDay(worst.startMs))+') '+(Math.abs(sw)<1?'seria com sense vent':'seria un '+Math.abs(sw).toFixed(0)+' % '+(sw>0?'menys':'més')); }
+  h+='.</p>';
+  if(b.maxGust>=50) h+='<p class="head"><b>Atenció:</b> hi ha ratxes de més de 50 km/h; revisa els avisos del Meteocat.</p>';
+  if(b.rainShare>0.05) h+='<p class="head"><b>Pluja prevista</b> en un '+Math.round(b.rainShare*100)+' % del recorregut a aquesta hora.</p>';
+  if(!S.allowNight&&S.cands.some(x=>x.night)) h+='<p class="small muted">S’han descartat les sortides que et farien rodar de nit (pots permetre-ho a l’esquerra).</p>';
+  const pool=(S.allowNight?S.cands:S.cands.filter(x=>!x.night)).slice().sort((a,c)=>a.idx-c.idx);
+  const picks=[];
+  pool.forEach(x=>{ if(picks.length<4&&!picks.some(y=>Math.abs(y.startMs-x.startMs)<3600000)) picks.push(x); });
+  h+='<div class="alt"><span class="small muted">Millors sortides:</span>'+picks.map(x=>'<button class="btn sm'+(x.startMs===r.startMs?' primary':'')+'" data-start="'+x.startMs+'" type="button">'+esc(fmtDay(x.startMs))+' '+fmtHM(x.startMs)+' · '+Math.abs(100-x.idx).toFixed(0)+' % '+(100-x.idx>=0?'menys':'més')+'</button>').join('')+'</div>';
+  if(r.startMs!==b.startMs) h+='<p class="small muted">Ara estàs veient la sortida de les '+fmtHM(r.startMs)+' ('+esc(fmtDay(r.startMs))+').</p>';
+  el.innerHTML=h;
+}
+function renderStartChart(){
+  const host=$('#cStart'), c=S.cands;
+  if(!c.length){host.innerHTML='';return;}
+  const bw=22, ml=84, mr=10, mt=14, mb=48, W=ml+mr+c.length*bw, H=220, ih=H-mt-mb;
+  const sv=c.map(x=>100-x.idx), mx=Math.max(20,Math.ceil(Math.max.apply(null,sv.map(Math.abs))/20)*20);
+  const Y=v=>mt+ih/2-v/mx*(ih/2), X=i=>ml+i*bw;
+  let g='';
+  [-mx,-mx/2,0,mx/2,mx].forEach(v=>{ g+='<line class="gl" x1="'+ml+'" x2="'+(W-mr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'"/><text class="tx" x="'+(ml-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+(v>0?Math.round(v)+' % menys':v<0?Math.abs(Math.round(v))+' % més':'com sense vent')+'</text>'; });
+  c.forEach((x,i)=>{
+    const v=sv[i], y0=Y(0), y1=Y(v), isSel=S.ride&&x.startMs===S.ride.startMs;
+    const col=v>=0?'var(--tail)':'var(--head)';
+    g+='<rect data-start="'+x.startMs+'" x="'+(X(i)+2)+'" y="'+Math.min(y0,y1)+'" width="'+(bw-4)+'" height="'+Math.max(2,Math.abs(y1-y0))+'" style="fill:'+col+';opacity:'+(x.night?0.28:0.92)+';cursor:pointer" '+(isSel?'stroke="var(--ink)" stroke-width="2"':'')+'><title>'+esc(fmtFull(x.startMs))+': '+Math.abs(v).toFixed(0)+' % '+(v>=0?'menys':'més')+' d’esforç'+(x.night?' (de nit)':'')+'</title></rect>';
+    const m=mp(x.startMs);
+    if(m.mi===0&&m.h%2===0) g+='<text class="tx" x="'+(X(i)+bw/2)+'" y="'+(H-mb+16)+'" text-anchor="middle">'+pad2(m.h)+'h</text>';
+    if((m.h===0&&m.mi===0)||i===0) g+='<text class="txi" x="'+(X(i)+2)+'" y="'+(H-8)+'" style="font-weight:700">'+esc(fmtDay(x.startMs))+'</text>';
+  });
+  if(S.best){ const i=c.findIndex(x=>x.startMs===S.best.startMs); if(i>=0) g+='<text class="txi" x="'+(X(i)+bw/2)+'" y="'+(Y(sv[i])-6)+'" text-anchor="middle" style="font-weight:700">millor</text>'; }
+  host.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Avantatge del vent segons l’hora de sortida">'+g+'</svg>';
+}
+function niceStep(total){ const c=[1,2,5,10,20,25,50,100]; for(const s of c) if(total/s<=9) return s; return 100; }
+function renderProfile(){
+  const R=S.route,r=S.ride,host=$('#cProfile'), f=r.fine;
+  const W=1000,H=314,ml=52,mr=18,mt=22,mb=96,iw=W-ml-mr,ih=H-mt-mb,total=R.total;
+  const X=d=>ml+d/total*iw;
+  const hm=Math.max(20,Math.ceil(Math.max.apply(null,f.map(p=>Math.abs(p.head)))/10)*10);
+  const Y=v=>mt+ih/2-v/hm*(ih/2), y0=Y(0);
+  let g='<defs><clipPath id="cpU"><rect x="'+ml+'" y="'+mt+'" width="'+iw+'" height="'+(y0-mt)+'"/></clipPath><clipPath id="cpD"><rect x="'+ml+'" y="'+y0+'" width="'+iw+'" height="'+(mt+ih-y0)+'"/></clipPath></defs>';
+  if(R.hasEle){
+    const es=f.map(p=>p.ele).filter(isNum), mn=Math.min.apply(null,es), mxE=Math.max.apply(null,es), span=Math.max(30,mxE-mn);
+    const EY=e=>mt+ih-((e-mn)/span)*ih*0.45;
+    const pts=f.filter(p=>isNum(p.ele));
+    g+='<path class="ele" d="M'+X(pts[0].d)+','+(mt+ih)+' L'+pts.map(p=>X(p.d)+','+EY(p.ele)).join(' L')+' L'+X(pts[pts.length-1].d)+','+(mt+ih)+' Z"/>';
+    g+='<text class="tx" x="'+(W-mr)+'" y="'+(mt-4)+'" text-anchor="end">silueta gris: alçada '+Math.round(mn)+'–'+Math.round(mxE)+' m</text>';
+  }
+  [-hm,-hm/2,0,hm/2,hm].forEach(v=>{ g+='<line class="gl'+(v===0?'':' d')+'" x1="'+ml+'" x2="'+(W-mr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" '+(v===0?'style="stroke:var(--muted)"':'')+'/><text class="tx" x="'+(ml-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+(v>0?'+':v<0?'−':'')+Math.abs(v)+'</text>'; });
+  g+='<text class="tx" x="'+(ml+6)+'" y="'+(mt+12)+'">de cara (km/h)</text><text class="tx" x="'+(ml+6)+'" y="'+(mt+ih-8)+'">de cua</text>';
+  const area='M'+X(f[0].d)+','+y0+' L'+f.map(p=>X(p.d)+','+Y(p.head)).join(' L')+' L'+X(f[f.length-1].d)+','+y0+' Z';
+  g+='<path d="'+area+'" clip-path="url(#cpU)" style="fill:var(--head);opacity:.55"/><path d="'+area+'" clip-path="url(#cpD)" style="fill:var(--tail);opacity:.55"/>';
+  g+='<path d="M'+f.map(p=>X(p.d)+','+Y(p.head)).join(' L')+'" fill="none" style="stroke:var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>';
+  const step=niceStep(total);
+  for(let d=0;d<=total+1e-6;d+=step){
+    g+='<line class="gl d" x1="'+X(d)+'" x2="'+X(d)+'" y1="'+mt+'" y2="'+(mt+ih)+'"/><text class="tx" x="'+X(d)+'" y="'+(mt+ih+14)+'" text-anchor="middle">'+d+' km</text><text class="txi" x="'+X(d)+'" y="'+(mt+ih+28)+'" text-anchor="middle" style="font-weight:600">'+fmtHM(r.startMs+d/r.v*3600000)+'</text>';
+  }
+  R.coarse.forEach((c,k)=>{
+    const w=r.cw[k].w, sc=0.55;
+    g+='<g transform="translate('+X(c.d)+','+(mt+ih+58)+') rotate('+(w.dir+180).toFixed(0)+') scale('+sc+')"><path d="'+ARROW_D+'" fill="'+windColor(w.spd)+'" stroke="rgba(8,24,32,.7)" stroke-width="1.6" stroke-linejoin="round"/></g>';
+    g+='<text class="txi sp" x="'+X(c.d)+'" y="'+(mt+ih+84)+'" text-anchor="middle">'+Math.round(w.spd)+'</text>';
+  });
+  g+='<line id="pcur" x1="0" x2="0" y1="'+mt+'" y2="'+(mt+ih)+'" style="stroke:var(--ink)" stroke-width="1.5" visibility="hidden"/>';
+  g+='<rect id="phit" x="'+ml+'" y="'+mt+'" width="'+iw+'" height="'+ih+'" fill="transparent"/>';
+  host.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="min-width:'+W+'px;width:100%;height:auto" role="img" aria-label="Component del vent al llarg de la ruta">'+g+'</svg>';
+  const svg=host.querySelector('svg'), hit=svg.querySelector('#phit'), cur=svg.querySelector('#pcur');
+  const move=e=>{
+    const b=svg.getBoundingClientRect(), x=(e.clientX-b.left)/b.width*W, d=clamp((x-ml)/iw*total,0,total);
+    let bi=0,bd=1e9; f.forEach((p,i)=>{ const dd=Math.abs(p.d-d); if(dd<bd){bd=dd;bi=i;} });
+    const p=f[bi]; cur.setAttribute('x1',X(p.d)); cur.setAttribute('x2',X(p.d)); cur.setAttribute('visibility','visible');
+    $('#profInfo').innerHTML='<b>Km '+p.d.toFixed(1)+'</b> · '+fmtHM(p.t)+' · vent '+windWord(p.spd)+' de '+c16(p.dir)+' ('+local8(p.dir)+') a '+Math.round(p.spd)+' km/h, ratxes '+Math.round(p.gst)+' · <b class="'+relCls(p.head)+'">'+esc(relPhrase(p.head,p.cross))+'</b>'+(isNum(p.ele)?' · '+Math.round(p.ele)+' m':'');
+    if(hoverMarker) L_misc.removeLayer(hoverMarker);
+    hoverMarker=L.circleMarker([p.lat,p.lon],{radius:8,color:'#fff',weight:3,fillColor:headColor(p.head),fillOpacity:1}).addTo(L_misc);
+  };
+  hit.addEventListener('pointermove',move); hit.addEventListener('pointerdown',move);
+  hit.addEventListener('pointerleave',()=>{ cur.setAttribute('visibility','hidden'); if(hoverMarker){L_misc.removeLayer(hoverMarker);hoverMarker=null;} });
+}
+function nearestCoarse(d){ let b=0,bd=1e9; S.route.coarse.forEach((c,i)=>{ const x=Math.abs(c.d-d); if(x<bd){bd=x;b=i;} }); return b; }
+function renderNarr(){
+  const R=S.route,r=S.ride,f=r.fine, t0=S.times[0], blocks=new Map();
+  f.forEach(p=>{
+    const k=Math.floor((p.t-t0)/3600000);
+    let b=blocks.get(k); if(!b){ b={d0:p.d,d1:p.d,t0:p.t,t1:p.t,n:0,head:0,cross:0,spd:0,e:0,nn:0,gst:0,pr:0,tmp:0,tn:0}; blocks.set(k,b); }
+    b.d1=p.d; b.t1=p.t; b.n++; b.head+=p.head; b.cross+=p.cross; b.spd+=p.spd; b.e+=p.e; b.nn+=p.n; if(p.gst>b.gst) b.gst=p.gst; if(p.pr>b.pr) b.pr=p.pr; if(isNum(p.tmp)){b.tmp+=p.tmp;b.tn++;}
+  });
+  const out=[];
+  Array.from(blocks.keys()).sort((a,b)=>a-b).forEach(k=>{
+    const b=blocks.get(k), head=b.head/b.n, cross=b.cross/b.n, spd=b.spd/b.n, dir=fromDir(b.e/b.n,b.nn/b.n);
+    const c0=R.coarse[nearestCoarse(b.d0)], c1=R.coarse[nearestCoarse(b.d1)];
+    const where=(c0.name&&c1.name)?(c0===c1?esc(c0.name):esc(c0.name)+' → '+esc(c1.name)):'';
+    const cls=relCls(head);
+    out.push('<li><svg width="30" height="30" viewBox="-20 -20 40 40" style="transform:rotate('+(dir+180).toFixed(0)+'deg)"><path d="'+ARROW_D+'" fill="'+windColor(spd)+'" stroke="rgba(8,24,32,.7)" stroke-width="1.4" stroke-linejoin="round"/></svg>'
+      +'<div><span class="when">'+fmtHM(b.t0)+'–'+fmtHM(b.t1)+' · km '+b.d0.toFixed(0)+'–'+b.d1.toFixed(0)+'</span>'+(where?' <span class="muted">('+where+')</span>':'')+'<br>'
+      +'Vent '+windWord(spd)+' de '+c16(dir)+' ('+local8(dir)+'), '+Math.round(spd)+' km/h de mitjana i ratxes fins a '+Math.round(b.gst)+' km/h. Per a tu: <b class="'+cls+'">'+esc(relPhrase(head,cross))+'</b>.'
+      +(b.tn?' '+Math.round(b.tmp/b.tn)+' °C.':'')+(b.pr>=0.2?' <b class="head">Possible pluja ('+b.pr.toFixed(1)+' mm/h).</b>':'')+'</div></li>');
+  });
+  $('#rNarr').innerHTML=out.join('');
+}
+function renderTable(){
+  const R=S.route,r=S.ride;
+  const rows=R.coarse.map((c,k)=>{
+    const w=r.cw[k].w;
+    const near=r.fine.reduce((a,p)=>(!a||Math.abs(p.d-c.d)<Math.abs(a.d-c.d))?p:a,null);
+    return '<tr data-k="'+k+'"><td>'+c.d.toFixed(1)+'</td><td><b>'+fmtHM(r.cw[k].t)+'</b></td><td>'+placeName(c)+'</td>'
+     +'<td><svg width="22" height="22" viewBox="-20 -20 40 40" style="transform:rotate('+(w.dir+180).toFixed(0)+'deg)"><path d="'+ARROW_D+'" fill="'+windColor(w.spd)+'" stroke="rgba(8,24,32,.7)" stroke-width="1.6" stroke-linejoin="round"/></svg> '+c16(w.dir)+' · '+local8(w.dir)+'</td>'
+     +'<td>'+Math.round(w.spd)+'</td><td>'+Math.round(w.gst)+'</td>'
+     +'<td class="'+relCls(near.head)+'">'+esc(relPhrase(near.head,near.cross))+'</td>'
+     +'<td>'+(isNum(w.tmp)?Math.round(w.tmp)+' °C':'—')+'</td><td>'+(w.pr>=0.2?w.pr.toFixed(1)+' mm/h':'—')+'</td></tr>';
+  }).join('');
+  $('#rTable').innerHTML='<thead><tr><th>Km</th><th>Hora de pas</th><th>Lloc</th><th>Vent (d’on ve)</th><th>km/h</th><th>Ratxes</th><th>Per a tu</th><th>Temp.</th><th>Pluja</th></tr></thead><tbody>'+rows+'</tbody>';
+}
+function renderSensors(){
+  const R=S.route,el=$('#rSensors'); if(!R) return;
+  if(!S.stations.length){ el.innerHTML='<p class="muted">No hi ha lectures recents de sensors del Meteocat per comparar.</p>'; return; }
+  const out=[];
+  S.stations.forEach(st=>{
+    let bd=1e9,bp=null;
+    for(const p of R.fine){ const d=hav(st,p); if(d<bd){bd=d;bp=p;} }
+    if(bd<=5) out.push({st,dist:bd,at:bp.d});
+  });
+  out.sort((a,b)=>a.at-b.at);
+  if(!out.length){ el.innerHTML='<p class="muted">Cap estació del Meteocat a menys de 5 km de la ruta. Al mapa pots clicar qualsevol sensor per comparar-lo amb el model.</p>'; return; }
+  const rows=out.slice(0,12).map(o=>{
+    const c=R.coarse[nearestCoarse(o.at)], w=windAt(c.series,o.st.tms);
+    const diff=w?Math.round(w.spd-o.st.spd):null;
+    return '<tr><td>'+esc(o.st.name)+'</td><td>km '+o.at.toFixed(0)+' ('+o.dist.toFixed(1)+' km de la ruta)</td><td>'+fmtHM(o.st.tms)+'</td>'
+      +'<td><b>'+Math.round(o.st.spd)+' km/h</b> de '+c16(o.st.dir)+'</td><td>'+(w?Math.round(w.spd)+' km/h de '+c16(w.dir):'—')+'</td><td>'+(diff===null?'—':(diff>=0?'+':'−')+Math.abs(diff)+' km/h')+'</td></tr>';
+  }).join('');
+  el.innerHTML='<div class="tablewrap"><table style="min-width:640px"><thead><tr><th>Estació</th><th>On és</th><th>Lectura</th><th>Mesurat</th><th>Model</th><th>Model − sensor</th></tr></thead><tbody>'+rows+'</tbody></table></div><p class="note">Mesura real de l’estació a l’hora de la lectura, contra el que deia el model per al punt de la ruta més proper. Si la diferència és gran, fia’t més del sensor per a l’hora actual.</p>';
+}
+function drawRouteLayers(){
+  const R=S.route,r=S.ride; L_route.clearLayers(); L_rarrows.clearLayers(); if(!R||!r) return;
+  const f=r.fine;
+  L_route.addLayer(L.polyline(f.map(p=>[p.lat,p.lon]),{color:'#08181f',weight:9,opacity:.45,lineCap:'round',lineJoin:'round',interactive:false}));
+  for(let i=0;i<f.length-1;i++){
+    L_route.addLayer(L.polyline([[f[i].lat,f[i].lon],[f[i+1].lat,f[i+1].lon]],{color:headColor((f[i].head+f[i+1].head)/2),weight:5,opacity:1,lineCap:'round',interactive:false}));
+  }
+  const a=f[0], z=f[f.length-1];
+  L_route.addLayer(L.circleMarker([a.lat,a.lon],{radius:8,color:'#fff',weight:3,fillColor:'#13946b',fillOpacity:1}).bindTooltip('Sortida '+fmtHM(r.startMs)));
+  L_route.addLayer(L.circleMarker([z.lat,z.lon],{radius:8,color:'#fff',weight:3,fillColor:'#10242d',fillOpacity:1}).bindTooltip('Arribada '+fmtHM(r.endMs)));
+  r.cw.forEach((x,k)=>{
+    const c=R.coarse[k]; if(k===0||k===r.cw.length-1) return;
+    const m=windMarker([c.lat,c.lon],x.w,{title:'Km '+c.d.toFixed(0)+' · '+fmtHM(x.t)+' · '+windText(x.w)});
+    m.on('click',()=>setPoint({label:'Ruta km '+c.d.toFixed(0),lat:c.lat,lon:c.lon,series:c.series},false));
+    L_rarrows.addLayer(m);
+  });
+}
+function updateRider(){
+  const R=S.route,r=S.ride; if(riderMarker){L_misc.removeLayer(riderMarker);riderMarker=null;}
+  if(!R||!r||!S.times.length) return;
+  const d=(curT()-r.startMs)/3600000*r.v;
+  if(d<0||d>R.total) return;
+  const p=R.posAt(d);
+  riderMarker=L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:3,fillColor:'#0b6e8f',fillOpacity:1}).addTo(L_misc).bindTooltip('Hi seràs a les '+fmtHM(curT())+' (km '+d.toFixed(1)+')');
+}
+
+/* ---------- Noms de llocs (OpenStreetMap, opcional) ---------- */
+async function fillNames(){
+  const R=S.route; if(!R) return;
+  const tok=++S.namesToken, btn=$('#namesBtn'), st=$('#namesStatus');
+  btn.disabled=true; let done=0;
+  try{
+    for(const c of R.coarse){
+      if(tok!==S.namesToken||S.route!==R) return;
+      if(!c.name){
+        const j=await getJSON('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=ca&lat='+c.lat.toFixed(5)+'&lon='+c.lon.toFixed(5));
+        const a=j.address||{};
+        c.name=a.village||a.town||a.city||a.hamlet||a.suburb||a.municipality||a.county||j.name||null;
+        await new Promise(r=>setTimeout(r,1100));
+      }
+      if(tok!==S.namesToken||S.route!==R) return;
+      done++; st.textContent='Noms: '+done+' / '+R.coarse.length;
+      renderTable(); renderNarr();
+    }
+    st.textContent='Noms posats.'; renderTable(); renderNarr();
+  }catch(e){ if(tok===S.namesToken&&S.route===R){ st.textContent='No s’han pogut obtenir tots els noms ('+e.message+').'; renderTable(); renderNarr(); } }
+  finally{ if(tok===S.namesToken) btn.disabled=false; }
+}
+
+
+
+/* ---------- Format (mòbil / ordinador), pantalla completa, ubicació ---------- */
+function applyLayout(){
+  const mode=S.layout, m=mode==='mobile'||(mode==='auto'&&window.innerWidth<=820);
+  const root=document.documentElement, was=root.classList.contains('m');
+  root.classList.toggle('m',m);
+  root.classList.toggle('d',mode==='desktop');
+  const vp=document.getElementById('vp');
+  vp.setAttribute('content',mode==='desktop'?'width=1280':'width=device-width, initial-scale=1, viewport-fit=cover');
+  document.querySelectorAll('#layoutSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===mode?'true':'false'));
+  if(m&&!was) document.querySelectorAll('.coll[data-closed]').forEach(c=>c.classList.add('closed'));
+  if(!m) document.querySelectorAll('.coll.closed').forEach(c=>c.classList.remove('closed'));
+  if(map) setTimeout(()=>map.invalidateSize(),60);
+}
+function setLayout(mode){ S.layout=mode; try{ localStorage.setItem('vent.layout',mode); }catch(e){} applyLayout(); }
+function toggleFull(force){
+  const mc=document.getElementById('mapcard');
+  const on=typeof force==='boolean'?force:!mc.classList.contains('full');
+  mc.classList.toggle('full',on); document.body.classList.toggle('lock',on);
+  $('#fullBtn').textContent=on?'Surt de pantalla completa':'Pantalla completa';
+  if(on) window.scrollTo(0,0);
+  setTimeout(()=>map.invalidateSize(),80);
+}
+function locate(){
+  if(!navigator.geolocation){ banner('Aquest navegador no ofereix geolocalització.'); return; }
+  const b=$('#locBtn'); b.disabled=true;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    b.disabled=false; banner(null);
+    const lat=pos.coords.latitude, lon=pos.coords.longitude;
+    map.flyTo([lat,lon],11,{duration:.8}); choosePoint(lat,lon,'La meva ubicació');
+  },err=>{
+    b.disabled=false;
+    banner('No s’ha pogut obtenir la teva ubicació ('+(err.code===1?'permís denegat':(err.message||'error'))+'). A l’iPhone cal obrir la pàgina amb https:// i permetre la ubicació a Safari.');
+  },{enableHighAccuracy:false,timeout:12000,maximumAge:300000});
+}
+
+/* ---------- Càrrega general ---------- */
+async function loadAll(){
+  banner(null); S.gridErr=false;
+  setChip('#chipFc','load','Pronòstic: carregant…');
+  S.cache.clear(); S.grid=null; S.gridKey='';
+  try{
+    const series=await fetchForecast(ZONES.map(z=>({lat:z.lat,lon:z.lon})));
+    const first=series.find(s=>!s.empty);
+    initTimes(first.t);
+    S.zones=ZONES.map((z,i)=>Object.assign({},z,{series:series[i]}));
+    const mLabel=(MODELS.find(m=>m[0]===S.model)||[0,S.model])[1];
+    setChip('#chipFc','ok','Pronòstic Open-Meteo · '+mLabel+' · carregat a les '+fmtHM(Date.now()));
+    if(!S.point||S.point.label==='Barcelona') setPoint({label:'Barcelona',lat:ZONES[0].lat,lon:ZONES[0].lon,series:series[0]});
+    else { const ps=(await fetchForecast([{lat:S.point.lat,lon:S.point.lon}]))[0]; setPoint(Object.assign({},S.point,{series:ps})); }
+    S.loadedAt=Date.now();
+    refreshTime();
+    loadGrid();
+    if(S.route){ await fetchRouteSeries(S.route); recomputeRoute(false); }
+  }catch(e){
+    setChip('#chipFc','err','Pronòstic: no disponible');
+    banner('No s’ha pogut obtenir el pronòstic d’Open-Meteo: '+e.message+' Comprova la connexió. L’eina no mostra cap valor inventat.',loadAll);
+  }
+}
+
+/* ---------- Esdeveniments ---------- */
+function saveSettings(){ try{ localStorage.setItem('vent.settings',JSON.stringify({model:S.model,color:S.fx.color,anim:S.fx.anim,arrows:S.fx.arrows,obs:S.showObs})); }catch(e){} }
+function loadSettings(){
+  try{
+    const j=JSON.parse(localStorage.getItem('vent.settings')||'null'); if(!j) return;
+    if(MODELS.some(m=>m[0]===j.model)) S.model=j.model;
+    ['color','anim','arrows'].forEach(k=>{ if(typeof j[k]==='boolean') S.fx[k]=j[k]; });
+    if(typeof j.obs==='boolean') S.showObs=j.obs;
+  }catch(e){}
+}
+function init(){
+  try{ const sl=localStorage.getItem('vent.layout'); if(sl==='auto'||sl==='mobile'||sl==='desktop') S.layout=sl; }catch(e){}
+  applyLayout();
+  $('#model').innerHTML=MODELS.map(m=>'<option value="'+m[0]+'">'+esc(m[1])+'</option>').join('');
+  $('#regions').innerHTML=REGIONS.map((r,i)=>'<button class="btn sm" data-r="'+i+'" type="button">'+esc(r[0])+'</button>').join('');
+  $('#grad').style.background='linear-gradient(to right,'+[0,15,30,45,60].map(v=>windColor(v)).join(',')+')';
+  loadSettings();
+  $('#model').value=S.model; $('#optColor').checked=S.fx.color; $('#optAnim').checked=S.fx.anim; $('#optArrows').checked=S.fx.arrows; $('#optObs').checked=S.showObs;
+  initMap();
+  $('#regions').addEventListener('click',e=>{ const b=e.target.closest('[data-r]'); if(b) map.fitBounds(REGIONS[+b.dataset.r][1]); });
+  $('#zones').addEventListener('click',e=>{
+    const b=e.target.closest('[data-z]'); if(!b) return;
+    const z=S.zones[+b.dataset.z]; if(!z||z.series.empty) return;
+    map.flyTo([z.lat,z.lon],10,{duration:.8}); setPoint({label:z.n,lat:z.lat,lon:z.lon,series:z.series});
+  });
+  $('#optColor').addEventListener('change',e=>{ S.fx.color=e.target.checked; saveSettings(); loadGrid(); scheduleFX(); });
+  $('#optAnim').addEventListener('change',e=>{ S.fx.anim=e.target.checked; saveSettings(); loadGrid(); scheduleFX(); });
+  $('#optArrows').addEventListener('change',e=>{ S.fx.arrows=e.target.checked; saveSettings(); loadGrid(); drawGrid(); });
+  $('#optObs').addEventListener('change',e=>{ S.showObs=e.target.checked; saveSettings(); drawObs(); });
+  $('#optNight').addEventListener('change',e=>{ S.allowNight=e.target.checked; if(S.route) recomputeRoute(true); });
+  $('#slider').addEventListener('input',e=>setIdx(+e.target.value));
+  $('#play').addEventListener('click',togglePlay);
+  $('#model').addEventListener('change',e=>{ S.model=e.target.value; saveSettings(); loadAll(); });
+  $('#refresh').addEventListener('click',()=>{ loadAll(); loadStations(); });
+  $('#speed').addEventListener('change',()=>{ S.speed=clamp(parseFloat($('#speed').value)||25,8,60); $('#speed').value=S.speed; if(S.route) recomputeRoute(true); });
+  $('#startDay').addEventListener('change',onStartInput);
+  $('#startTime').addEventListener('change',onStartInput);
+  $('#bestBtn').addEventListener('click',()=>{ if(S.best) selectStartMs(S.best.startMs); });
+  $('#clearBtn').addEventListener('click',clearRoute);
+  $('#namesBtn').addEventListener('click',fillNames);
+  $('#file').addEventListener('change',e=>loadGPXFile(e.target.files[0]));
+  $('#routeOut').addEventListener('click',e=>{
+    const s=e.target.closest('[data-start]'); if(s&&S.route){ selectStartMs(+s.dataset.start); return; }
+    const tr=e.target.closest('tr[data-k]');
+    if(tr){ const c=S.route.coarse[+tr.dataset.k]; map.flyTo([c.lat,c.lon],12,{duration:.6}); setPoint({label:'Ruta km '+c.d.toFixed(0)+(c.name?' · '+c.name:''),lat:c.lat,lon:c.lon,series:c.series}); document.getElementById('mapcard').scrollIntoView({behavior:'smooth',block:'start'}); }
+  });
+  const mc=$('#mapcard'), drop=$('#drop'); let dc=0;
+  ['dragenter','dragover'].forEach(ev=>mc.addEventListener(ev,e=>{ e.preventDefault(); if(ev==='dragenter') dc++; drop.classList.add('on'); }));
+  mc.addEventListener('dragleave',e=>{ e.preventDefault(); dc=Math.max(0,dc-1); if(!dc) drop.classList.remove('on'); });
+  mc.addEventListener('drop',e=>{ e.preventDefault(); dc=0; drop.classList.remove('on'); const f=e.dataTransfer.files[0]; if(f) loadGPXFile(f); });
+  let rt=null; window.addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(()=>{ applyLayout(); map.invalidateSize(); },150); });
+  window.addEventListener('orientationchange',()=>setTimeout(()=>{ applyLayout(); map.invalidateSize(); },300));
+  $('#layoutSeg').addEventListener('click',e=>{ const b=e.target.closest('[data-l]'); if(b) setLayout(b.dataset.l); });
+  $('#fullBtn').addEventListener('click',()=>toggleFull());
+  $('#locBtn').addEventListener('click',locate);
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#mapcard').classList.contains('full')) toggleFull(false); });
+  const toggleColl=h=>{ if(document.documentElement.classList.contains('m')) h.parentNode.classList.toggle('closed'); };
+  document.addEventListener('click',e=>{ const h=e.target.closest('.coll>h2'); if(h) toggleColl(h); });
+  document.querySelectorAll('.coll>h2').forEach(h=>{ h.tabIndex=0; h.setAttribute('role','button'); h.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleColl(h); } }); });
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState!=='visible') return;
+    if(S.loadedAt&&Date.now()-S.loadedAt>30*60e3) loadAll();
+    if(S.obsAt&&Date.now()-S.obsAt>10*60e3) loadStations();
+  });
+  const tm=$('#toMap');
+  window.addEventListener('scroll',()=>{ tm.hidden=!(document.documentElement.classList.contains('m')&&window.scrollY>650&&!$('#mapcard').classList.contains('full')); },{passive:true});
+  tm.addEventListener('click',()=>{ $('#mapcard').scrollIntoView({behavior:'smooth',block:'start'}); });
+  loadStations();
+  loadAll();
+  setInterval(loadStations,10*60*1000);
+  if(location.protocol==='file:'&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
+    banner('Estàs obrint el fitxer directament al mòbil: molts mòbils (sobretot l’iPhone) no deixen que un fitxer local carregui dades. Penja’l a una adreça web; mira “Com obrir-ho al mòbil” al final de la pàgina.');
+  }
+}
+init();
+})();
+</script>
+</body>
+</html>
